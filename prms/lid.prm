@@ -1,0 +1,82 @@
+# Listing of Parameters
+# ---------------------
+set Delta t                = .1
+set Dirichlet BC indicator = 0
+set Final t                = 1
+set Fluid density          = 1
+set Fluid viscosity        = 1
+set Fluid refinement       = 4
+set Semi-implicit scheme   = false
+set Solid density          = 1
+set Solid viscosity        = 1
+set Solid refinement       = 4
+set Fluid mesh             = mesh/fluid_square.inp
+set Solid mesh             = mesh/solid_square.inp
+set Output base name       = out/square
+set Update J cont          = false
+set Use sundials           = true
+
+
+subsection DAE
+  set Absolute error tolerance        = 1e-4
+  set Final time                      = 100000
+  set Initial step size               = 1e-6
+  set Initial time                    = 0
+  set Min step size                   = 5e-5
+  set Output period                   = .04
+  set Provide jacobian preconditioner = true
+  set Provide jacobian product        = true
+  set Relative error tolerance        = 1e-3
+  set Use iterative algorithm         = true
+end
+
+
+subsection W0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection force
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection u0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+subsection ugt
+  set Function expression = 0; 0; 0
+end
+
+subsection ug
+  set Function expression = if(y>.99, 1, 0); 0; 0
+end
+
+

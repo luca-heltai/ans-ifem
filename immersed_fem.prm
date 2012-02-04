@@ -1,0 +1,76 @@
+# Listing of Parameters
+# ---------------------
+set Delta t                        = .1
+set Density                        = 1
+set Dirichlet BC indicator         = 1
+set Elastic modulus                = 1
+set Final t                        = 1
+set Fix one dof of p               = false
+set Fluid mesh                     = mesh/fluid_square.inp
+set Fluid refinement               = 4
+set Output base name               = out/square
+set Semi-implicit scheme           = true
+set Solid mesh                     = mesh/solid_square.inp
+set Solid refinement               = 1
+set Update J cont                  = false
+set Velocity finite element degree = 2
+set Viscosity                      = 1
+set Zero residual stress           = true
+
+
+subsection W0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection force
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection u0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection ug
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+

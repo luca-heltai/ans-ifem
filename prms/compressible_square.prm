@@ -1,0 +1,60 @@
+# Listing of Parameters
+# ---------------------
+set Delta t                = .1
+set Dirichlet BC indicator = 0
+set Final t                = 1
+set Fluid density          = 1
+set Fluid viscosity        = 1
+set Fluid refinement       = 3
+set Semi-implicit scheme   = false
+set Solid density          = 1
+set Solid is compressible  = true
+set Solid viscosity        = 0
+set Solid refinement       = 3
+set Fluid mesh             = mesh/fluid_rectangle.inp
+set Solid mesh             = mesh/solid_square.inp
+set Output base name       = out/rectangle
+set Update J cont          = false
+set Use sundials           = false
+
+
+subsection DAE
+  set Absolute error tolerance        = 1e-4
+  set Final time                      = 100000
+  set Initial step size               = 1e-3
+  set Initial time                    = 0
+  set Min step size                   = 5e-5
+  set Output period                   = .04
+  set Provide jacobian preconditioner = true
+  set Provide jacobian product        = true
+  set Relative error tolerance        = 1e-3
+  set Use iterative algorithm         = true
+end
+
+
+subsection W0
+  set Function expression = 0; 0
+  set Function expression = 2*(x-.2)+1; .3 
+end
+
+
+subsection force
+  set Function expression = 0; 0; 0
+end
+
+
+subsection u0
+  set Function expression = 0; 0; 0
+end
+
+subsection ugt
+  set Function expression = if(t<1, 1, 0)*if(x<.1, y*(1-y), 0); 0; 0
+  set Function expression = 0; 0; 0
+end
+
+subsection ug
+  set Function expression = if(t<1, t, 1)*if(x<.1, y*(1-y), 0); 0; 0
+  set Function expression = 0; 0; 0
+end
+
+

@@ -1,0 +1,59 @@
+# Listing of Parameters
+# ---------------------
+set Delta t                = .01
+set Dirichlet BC indicator = 0
+set Final t                = 100
+set Fluid density          = 1
+set Fluid viscosity        = 0.01
+set Fluid refinement       = 5
+set Fix one dof of p       = false
+set Semi-implicit scheme   = true
+set Solid density          = 1
+set Solid is compressible  = true
+set Solid viscosity        = 0
+set Solid refinement       = 0
+set Fluid mesh             = mesh/fluid_square_neumann.inp
+set Solid mesh             = mesh/ball2.inp
+set Output base name       = out/ball_equi
+set Update J cont          = false
+set Use sundials           = false
+
+
+subsection DAE
+  set Absolute error tolerance        = 1e-3
+  set Final time                      = 100000
+  set Initial step size               = 1e-3
+  set Initial time                    = 0
+  set Min step size                   = 5e-5
+  set Output period                   = .04
+  set Provide jacobian preconditioner = true
+  set Provide jacobian product        = true
+  set Relative error tolerance        = 1e-2
+  set Use iterative algorithm         = true
+end
+
+
+subsection W0
+  set Function expression = .5; .5 
+  set Function expression = -.5*x+.6; -.5*y+.6 
+end
+
+
+subsection force
+  set Function expression = 0; -10; 0
+end
+
+
+subsection u0
+  set Function expression = 0; 0; 0
+end
+
+subsection ugt
+  set Function expression = 0; 0; 0
+end
+
+subsection ug
+  set Function expression = 0; 0; 0
+end
+
+
