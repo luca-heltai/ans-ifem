@@ -463,6 +463,7 @@ class ImmersedFEM
     void create_triangulation_and_dofs ();
 
     void apply_constraints(vector<double> &local_res,
+			   FullMatrix<double> &local_jacobian,
 			   const Vector<double> &local_up,
 			   const vector<unsigned int> &dofs);
 //     
@@ -1203,7 +1204,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 	}
 
 	  // Apply boundary conditions.
-     apply_constraints(local_res, xi.block(0), dofs_f);
+     apply_constraints(local_res, local_jacobian, xi.block(0), dofs_f);
 // 	  // Now the contribution to the residual due to the current cell
 // 	  // is assembled into the global system's residual.
       distribute(residual.block(0),
@@ -2160,6 +2161,7 @@ void ImmersedFEM<dim>::distribute(Vector<double> &residual,
 
 template <int dim>
 void ImmersedFEM<dim>::apply_constraints(vector<double> &local_res,
+						      FullMatrix<double> &local_jacobian,
 						      const Vector<double> &value_of_dofs,
 						      const vector<unsigned int> &dofs)
 {
@@ -2167,7 +2169,11 @@ void ImmersedFEM<dim>::apply_constraints(vector<double> &local_res,
     {
       map<unsigned int, double>::iterator it = par.boundary_values.find(dofs[i]);  
       if(it != par.boundary_values.end() )
-        local_res[i] = scaling * ( value_of_dofs(dofs[i]) - it->second );
+       {
+         local_res[i] = scaling * ( value_of_dofs(dofs[i]) - it->second );
+         for(unsigned int j=0; j<dofs.size(); ++j) local_jacobian(i,j) = 0;
+         local_jacobian(i,i) = scaling;
+       }
     }
 }
 
