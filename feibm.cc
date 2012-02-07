@@ -314,12 +314,6 @@ class ImmersedFEM
 				*/
     std::vector<unsigned char>     boundary_indicators;
 
-				/** Map storing the boundary conditions.
-				1st: a boundary degree of freedom;
-				2nd: the value of field corresponding to the given
-				degree of freedom. */
-    std::map<unsigned int, double> boundary_values;
-
 				/** This is the triangulation over the control volume (fluid
 				domain). Following <b>deal.II</b> conventions,
 				a triangulation pertains to a manifold of dimension
@@ -574,13 +568,12 @@ ImmersedFEM<dim>::apply_current_bc(BlockVector<double> &vec,
   map<unsigned int, double>::iterator
     it    = par.boundary_values.begin(),
     itend = par.boundary_values.end();
-
+    // NOTE: modify by removing use of constraints_f but adding an assert on the size of vec.
   if(vec.size() != 0)
     for(;it != itend; ++it)
       vec.block(0)(it->first) = it->second;
   else
     for(;it != itend; ++it)
-    // NOTE: when is this ever used?  Also, what is the constraint matrix is closed.
       constraints_f.set_inhomogeneity(it->first, it->second);
 }
 
@@ -901,9 +894,6 @@ assemble_zero_mean_value_constraints ()
   Vector<double> local_C(fe_f.dofs_per_cell);
   
   unsigned int comp_i = 0;
-  // NOTE: FC does not see that the vector below is used in any meaningful way.
- //  std::set<unsigned int> pressure_comp;
-  //
   double area = 0;
   
   for(; cell != endc; ++cell) 
@@ -918,7 +908,6 @@ assemble_zero_mean_value_constraints ()
 	  comp_i = fe_f.system_to_component_index(i).first;
 	  if(comp_i == dim) 
 	    {
-//	      pressure_comp.insert(dofs_f[i]);
 	      for(unsigned int q=0; q<quad_f.size(); ++q)
 		local_C(i) += fe_v.shape_value(i,q)*fe_v.JxW(q);
 	    }
@@ -1001,13 +990,13 @@ assemble_zero_mean_value_constraints ()
   
 template <int dim>
 void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
-							  BlockSparseMatrix<double> &Jacobian,
+							  BlockSparseMatrix<double> &jacobian,
 							  const BlockVector<double> &xit,
 							  const BlockVector<double> &xi, 
 							  const double alpha,
 							  const double t) 
 {
-    bool update_Jacobian = !Jacobian.empty();
+    bool update_jacobian = !jacobian.empty();
     
     if(mapping != NULL) delete mapping;
 
@@ -1016,7 +1005,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 					// previous time step.
     if(par.semi_implicit == true) 
      {
-       if(std::fabs(previous_time - t) > 1e-12) // If at the very beginning of the current time step.
+       if(std::fabs(previous_time - t) > 1e-12) // If at the very beginning of the current time step. (Not needed when using the implicit Euler Method written in run().)
         {
           previous_time = t;
           previous_xi = xi;
@@ -1035,11 +1024,11 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
     residual = 0;
 					// If the calculation of the residual is requested, then
 					// the Jacobian is initialized.
-    if(update_Jacobian)
+    if(update_jacobian)
      {
-       Jacobian.clear();
+       jacobian.clear();
        assemble_sparsity(*mapping);
-       Jacobian.reinit(sparsity);
+       jacobian.reinit(sparsity);
      }
   
 
@@ -1064,11 +1053,12 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   std::vector< unsigned int > dofs_s(fe_s.dofs_per_cell);
 
   // FEValues for the fluid.
-  FEValues<dim> fe_f_v(fe_f, quad_f,
-		       update_values |
-		       update_gradients |
-		       update_JxW_values |
-		       update_quadrature_points);
+  FEValues<dim> fe_f_v(fe_f,
+                       quad_f,
+                       update_values |
+                       update_gradients |
+                       update_JxW_values |
+                       update_quadrature_points);
 
   // Number of quadrature points on fluid and solid cells, respectively.
   const unsigned int nqpf = quad_f.size();
@@ -1078,12 +1068,15 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   // n_local_dofs.
   std::vector<double> local_res(n_local_dofs);
   std::vector<Vector<double> > local_force(nqpf, Vector<double>(dim+1));
+  FullMatrix<double> local_jacobian;
+  if(update_jacobian) local_jacobian.reinit(n_local_dofs, n_local_dofs); 
 
 //   Vector<double> local_res_double_f(fe_f.dofs_per_cell);
 //   Vector<double> local_res_double_s(fe_s.dofs_per_cell);
 //   FullMatrix<double> local_jac_double_f(fe_f.dofs_per_cell, fe_f.dofs_per_cell);
 //   FullMatrix<double> local_jac_double_s(fe_s.dofs_per_cell, fe_s.dofs_per_cell);
-  FullMatrix<double> local_jacobian(n_local_dofs, n_local_dofs); 
+    
+//  FullMatrix<double> local_jacobian(n_local_dofs, n_local_dofs); 
   
 // -------------------------------------
 // Since we want to solve a system of equations of the form
@@ -1153,150 +1146,213 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
       // cell.
       par.force.vector_value_list(fe_f_v.get_quadrature_points(), local_force);
 
-      // Initialization of the container local_res for the current cell.
+      // Initialization of the local residual and local jacobian.
       set_to_zero(local_res);
+      if(update_jacobian) set_to_zero(local_jacobian);
 
       for(unsigned int i=0; i<fe_f.dofs_per_cell;++i) 
-	{
-	  comp_i = fe_f.system_to_component_index(i).first;
-	  for(unsigned int q=0; q< nqpf; ++q) 
-	    // ------------------------------------ 
-	    // Contribution to the equation in V'.
-	    // ------------------------------------
-	    if(comp_i < dim) 
-	      {
-		local_res[i] +=
-		  (
-						     // rho (ut - b).v
-		    par.rho*(local_upt[q](comp_i)-local_force[q](comp_i))
-		    *fe_f_v.shape_value(i,q)   
-						     // - p div v
-		    - local_up[q](dim)*fe_f_v.shape_grad(i,q)[comp_i]
-		  )*fe_f_v.JxW(q);  
-		for(unsigned int d=0; d<dim; ++d) 
-		  {
-			 local_res[i] +=
-			   (
-				 // T_{f} . grad v; T_{f} = 2 \eta (1/2) (L + L^{T})
-				 par.eta*
-				 ( local_grad_up[q][comp_i][d] + local_grad_up[q][d][comp_i] )*
-				 fe_f_v.shape_grad(i,q)[d]
-				 + ( par.rho * local_grad_up[q][comp_i][d] * 
-					 local_up[q](d)  *	       // rho (u. nabla u) . v
-					 fe_f_v.shape_value(i,q)
-					)
-			   )*fe_f_v.JxW(q);
-		  }
-	      }
-	    else 
-	    // ------------------------------------ 
-	    // Contribution to the equation in Q'.
-	    // ------------------------------------
-	      {
-	    	  for(unsigned int d=0; d<dim;++d)
-	    					     // - q div u
- 	    	    local_res[i] += 
- 	    	      -local_grad_up[q][d][d]*
- 	    	       fe_f_v.shape_value(i,q)*
- 	    	       fe_f_v.JxW(q);
-	      }
-	  
-	}
+        {
+          comp_i = fe_f.system_to_component_index(i).first;
+          for(unsigned int q=0; q< nqpf; ++q) 
+				   // ------------------------------------ 
+				   // Contribution to the equation in V'.
+				   // ------------------------------------
+          if(comp_i < dim) 
+           {
+				   // rho (ut - b).v - p div v
+             local_res[i] += par.rho
+                           * ( local_upt[q](comp_i)
+                              -
+                               local_force[q](comp_i) )
+                           * fe_f_v.shape_value(i,q)
+                           * fe_f_v.JxW(q)
+                           - local_up[q](dim)
+                           * fe_f_v.shape_grad(i,q)[comp_i]
+                           * fe_f_v.JxW(q);
+             if(update_jacobian) 
+             {
+               for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+                 {
+                   comp_j = fe_f.system_to_component_index(j).first;
+                   if( comp_i == comp_j )
+                     local_jacobian(i,j) += par.rho
+                                          * alpha
+                                          * fe_f_v.shape_value(i,q)
+                                          * fe_f_v.shape_value(j,q)
+                                          * fe_f_v.JxW(q);
+                   if( comp_j == dim )
+                     local_jacobian(i,j) -= fe_f_v.shape_grad(i,q)[comp_i]
+                                          * fe_f_v.shape_value(j,q)
+                                          * fe_f_v.JxW(q);
+                 }
+             }
+				 // T_{f} . grad_v + rho (grad_u u) . v
+				 // where T_{f} = 2 \eta (1/2) (L + L^{T})
+          for(unsigned int d=0; d<dim; ++d)
+            {
+              local_res[i] += par.eta
+                            * ( local_grad_up[q][comp_i][d]
+                               +
+                                local_grad_up[q][d][comp_i] )
+                            * fe_f_v.shape_grad(i,q)[d]
+                            * fe_f_v.JxW(q)
+                            + par.rho
+                            * local_grad_up[q][comp_i][d]
+                            * local_up[q](d) 
+                            * fe_f_v.shape_value(i,q)
+                            * fe_f_v.JxW(q);
+            }
+          if( update_jacobian )
+           {
+             for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+              {
+                comp_j = fe_f.system_to_component_index(j).first;
+                if( comp_j == comp_i )
+                 for( unsigned int d = 0; d < dim; ++d )
+                   local_jacobian(i,j) += par.eta 
+                                        * fe_f_v.shape_grad(i,q)[d]
+                                        * fe_f_v.shape_grad(j,q)[d]
+                                        * fe_f_v.JxW(q)
+                                        + par.rho
+                                        * fe_f_v.shape_value(i,q)
+                                        * local_up[q](d)
+                                        * fe_f_v.shape_grad(j,q)[d]
+                                        * fe_f_v.JxW(q);
+                if(comp_j < dim)
+                  local_jacobian(i,j) += par.eta
+                                       * fe_f_v.shape_grad(i,q)[comp_j]
+                                       * fe_f_v.shape_grad(j,q)[comp_i]
+                                       * fe_f_v.JxW(q)
+                                       + par.rho
+                                       * local_grad_up[q][comp_i][comp_j]
+                                       * fe_f_v.shape_value(i,q)
+                                       * fe_f_v.shape_value(j,q)
+                                       * fe_f_v.JxW(q);
+              }
+           }
+           }
+          else
+           {
+				 // ------------------------------------ 
+				 // Contribution to the equation in Q'.
+				 // ------------------------------------
+				 // - q div u
+             for(unsigned int d=0; d<dim;++d)
+               local_res[i] -= local_grad_up[q][d][d]
+                             * fe_f_v.shape_value(i,q)
+                             * fe_f_v.JxW(q);
+             if( update_jacobian )
+              for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+               {
+                 comp_j = fe_f.system_to_component_index(j).first;
+                 if( comp_j < dim )
+                  local_jacobian(i,j) -= fe_f_v.shape_value(i,q)
+                                       * fe_f_v.shape_grad(j,q)[comp_j]
+                                       * fe_f_v.JxW(q);
+               }
+           }
+        }
 
-	  // Apply boundary conditions.
-     apply_constraints(local_res, local_jacobian, xi.block(0), dofs_f);
-// 	  // Now the contribution to the residual due to the current cell
-// 	  // is assembled into the global system's residual.
+				 // Apply boundary conditions.
+      apply_constraints(local_res,
+                        local_jacobian,
+                        xi.block(0),
+                        dofs_f);
+				 // Now the contribution to the residual due to the current cell
+				 // is assembled into the global system's residual.
       distribute(residual.block(0),
-		 JF.block(0,0),
-		 local_res,
-		 local_jacobian,
-		 dofs_f, 0, 0);
+                 JF.block(0,0),
+                 local_res,
+                 local_jacobian,
+                 dofs_f,
+                 0,
+                 0);
     }
-// // ------------------------------------------------------------
-// // OPERATORS DEFINED OVER ENTIRE DOMAIN: END 
-// // ------------------------------------------------------------
-// 
-// 
-// // ------------------------------------------------------------
-// // OPERATORS DEFINED OVER THE IMMERSED DOMAIN: BEGIN 
-// // ------------------------------------------------------------
-// // All but one of the operators defined over the immersed domain pertain
-// // to the interaction between solid and fluid.  The one contribution that does
-// // not pertain to this interaction is assembled last.  With this in mind, we
-// // distinguish two orders or organization.
-// //
-// // FIRST: we have a cycle over the cells of the immersed domain.  For
-// //        each cell of the immersed domain we determine the cells in the
-// //        fluid domain interacting with the cell in question.  Then we cycle
-// //        over each of the fluid cell.
-// // SECOND: The operators defined over the immersed domain contribute to
-// //         all three of the equations forming the problem.  We group
-// //         the operators in question by equation.  Specifically, we 
-// //         first deal with the terms that contribute to the equation in
-// //         V', then we deal with the terms that contribute to Q',
-// //         and finally we deal with the terms that contribute to Y'.
-// // NOTE: In the equation in Y' there is contribution that does not arise
-// //       from the interaction of solid and fluid. 
-// 
-// // Setting up the infrastructure to store the information
-// // needed to characterize the fluid-solid interaction.
-// 
-//   // This is a field containing the values of velocity and pressure.
-//   FEFieldFunction<dim, DoFHandler<dim>, Vector<double> >
-//     up_field (dh_f, xi.block(0));
-// 
-//   // Containers needed to store the information pertaining to the interaction
-//   // of the current solid cell with the corresponding set of fluid cells that
-//   // happen to contain the quadrature points of the solid cell in question.
-//   std::vector< typename DoFHandler<dim>::active_cell_iterator > fluid_cells;
-//   std::vector< std::vector< Point< dim > > > fluid_qpoints;
-//   std::vector< std::vector< unsigned int> > fluid_maps;
-// 
-//   // Local storage of the
-//   // Wt: velocity in the solid
-//   // W:  displacement in the solid
-//   // div_Wt: divergence of the velocity in the solid
-//   // F: deformation gradient in the solid
-//   // F_inv: inverse of the deformation gradient
-//   // F_dot: material time derivative of the deformation gradient.
-//   // J: Jacobian of the deformation gradient
-//   std::vector<std::vector<Type> > local_Wt(nqps, std::vector<Type>(dim));
-//   std::vector<std::vector<Type> > local_W(nqps, std::vector<Type>(dim));
-//   std::vector<Type> local_div_Wt(nqps);
-//   std::vector<Table<2,Type> > local_F(nqps, Table<2,Type>(dim,dim));
-//   std::vector<Table<2,Type> > local_F_inv(nqps, Table<2,Type>(dim,dim));
-//   std::vector<Table<2,Type> > local_F_dot(nqps, Table<2,Type>(dim,dim));
-//   std::vector<Type> local_J(nqps);
-// 
-//   // This information is used in finding what fluid cell contain the solid
-//   // domain at the current time.
-//   FEValues<dim,dim> fe_v_s_mapped(*mapping, fe_s, quad_s,
-// 					   update_quadrature_points);
-// 
-//   // FEValues needed to carry out integrations over the solid domain.
-//   FEValues<dim,dim> fe_v_s(fe_s, quad_s,
-// 				    update_quadrature_points |
-// 				    update_values |
-// 				    update_gradients |
-// 				    update_JxW_values);
-// 
-//   
-//   // Iterators pointing to the beginning and end cells of the active
-//   // triangulation for the solid domain.
-//   typename DoFHandler<dim,dim>::active_cell_iterator
-//     cell_s = dh_s.begin_active(),
-//     endc_s = dh_s.end();
-// 
-//   // -----------------------------------------------
-//   // Cycle over the cells of the solid domain: BEGIN
-//   // -----------------------------------------------
-//   for(; cell_s != endc_s; ++cell_s)
-//     {
-//       fe_v_s_mapped.reinit(cell_s);
-//       fe_v_s.reinit(cell_s);
-//       cell_s->get_dof_indices(dofs_s);
-// 
+// ------------------------------------------------------------
+// OPERATORS DEFINED OVER ENTIRE DOMAIN: END 
+// ------------------------------------------------------------
+
+
+// ------------------------------------------------------------
+// OPERATORS DEFINED OVER THE IMMERSED DOMAIN: BEGIN 
+// ------------------------------------------------------------
+// All but one of the operators defined over the immersed domain pertain
+// to the interaction between solid and fluid.  The one contribution that does
+// not pertain to this interaction is assembled last.  With this in mind, we
+// distinguish two orders or organization.
+//
+// FIRST: we have a cycle over the cells of the immersed domain.  For
+//        each cell of the immersed domain we determine the cells in the
+//        fluid domain interacting with the cell in question.  Then we cycle
+//        over each of the fluid cell.
+// SECOND: The operators defined over the immersed domain contribute to
+//         all three of the equations forming the problem.  We group
+//         the operators in question by equation.  Specifically, we 
+//         first deal with the terms that contribute to the equation in
+//         V', then we deal with the terms that contribute to Q',
+//         and finally we deal with the terms that contribute to Y'.
+// NOTE: In the equation in Y' there is contribution that does not arise
+//       from the interaction of solid and fluid. 
+
+// Setting up the infrastructure to store the information
+// needed to characterize the fluid-solid interaction.
+
+  // This is a field containing the values of velocity and pressure.
+  FEFieldFunction<dim, DoFHandler<dim>, Vector<double> >
+    up_field (dh_f, xi.block(0));
+
+  // Containers needed to store the information pertaining to the interaction
+  // of the current solid cell with the corresponding set of fluid cells that
+  // happen to contain the quadrature points of the solid cell in question.
+  std::vector< typename DoFHandler<dim>::active_cell_iterator > fluid_cells;
+  std::vector< std::vector< Point< dim > > > fluid_qpoints;
+  std::vector< std::vector< unsigned int> > fluid_maps;
+
+  // Local storage of the
+  // Wt: velocity in the solid
+  // W:  displacement in the solid
+  // div_Wt: divergence of the velocity in the solid
+  // F: deformation gradient in the solid
+  // F_inv: inverse of the deformation gradient
+  // F_dot: material time derivative of the deformation gradient.
+  // J: Jacobian of the deformation gradient
+  std::vector<Vector<double> > local_Wt(nqps, Vector<double>(dim));
+  std::vector<Vector<double> > local_W (nqps, Vector<double>(dim));
+  std::vector<double> local_div_Wt(nqps);
+  std::vector<Tensor<2,dim,double> > local_F    (nqps, Tensor<2,dim,double>());
+  std::vector<Tensor<2,dim,double> > local_F_inv(nqps, Tensor<2,dim,double>());
+  std::vector<Tensor<2,dim,double> > local_F_dot(nqps, Tensor<2,dim,double>());
+  std::vector<double> local_J(nqps);
+
+  // This information is used in finding what fluid cell contain the solid
+  // domain at the current time.
+  FEValues<dim,dim> fe_v_s_mapped(*mapping, fe_s, quad_s,
+                                  update_quadrature_points);
+
+  // FEValues needed to carry out integrations over the solid domain.
+  FEValues<dim,dim> fe_v_s(fe_s,
+                           quad_s,
+                           update_quadrature_points |
+                           update_values |
+                           update_gradients |
+                           update_JxW_values);
+
+  
+  // Iterators pointing to the beginning and end cells of the active
+  // triangulation for the solid domain.
+  typename DoFHandler<dim,dim>::active_cell_iterator
+    cell_s = dh_s.begin_active(),
+    endc_s = dh_s.end();
+
+  // -----------------------------------------------
+  // Cycle over the cells of the solid domain: BEGIN
+  // -----------------------------------------------
+  for(; cell_s != endc_s; ++cell_s)
+    {
+      fe_v_s_mapped.reinit(cell_s);
+      fe_v_s.reinit(cell_s);
+      cell_s->get_dof_indices(dofs_s);
+
 // 						  // Localization of the current independent variables
 // 						  // pertaining to the solid.
 //       localize(local_x, xit.block(1), xi.block(1),
@@ -1315,39 +1371,41 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 //       localize_fields(local_Wt, local_W, local_F, local_F_dot,
 // 		      local_F_inv, local_J, fe_v_s, local_x);
 //       
-// 				       // Coupling between fluid and solid.
-// 				       // Identification of the fluid cells containing the
-// 				       // quadrature points on the current solid cell.
-//       up_field.compute_point_locations (fe_v_s_mapped.get_quadrature_points(),
-// 					fluid_cells, fluid_qpoints, fluid_maps);
-// 
-//       local_force.resize(nqps);
-//       par.force.vector_value_list(fe_v_s_mapped.get_quadrature_points(),
-// 				  local_force);
-//       
-//       
-//       // Cycle over all of the fluid cells that happen to contain some of the 
-//       // the quadrature points of the current solid cell.
-//       for(unsigned int c=0; c<fluid_cells.size(); ++c) 
-// 	{
-// 	  fluid_cells[c]->get_dof_indices(dofs_f);
-// 
-// 					   // Local FEValues of the
-// 					   // fluid
-// 	  Quadrature<dim> local_quad(fluid_qpoints[c]);
-// 	  
-// 	  FEValues<dim> local_fe_f_v(fe_f, local_quad,
-// 				     update_values |
-// 				     update_gradients |
-// 				     update_JxW_values);
-// 	  local_fe_f_v.reinit(fluid_cells[c]);
-// 	  
-// 	  
-// 						  // Construction of the values at the quadrature points
-// 						  // of the current solid cell of the dependent
-// 						  // variables in the
-// 						  // fluid, namely,
-// 						  // u, ut, grad_u, p.
+				 // Coupling between fluid and solid.
+				 // Identification of the fluid cells containing the
+				 // quadrature points on the current solid cell.
+      up_field.compute_point_locations(fe_v_s_mapped.get_quadrature_points(),
+                                       fluid_cells,
+                                       fluid_qpoints,
+                                       fluid_maps);
+
+      local_force.resize(nqps);
+      par.force.vector_value_list(fe_v_s_mapped.get_quadrature_points(),
+                                  local_force);
+      
+      
+      // Cycle over all of the fluid cells that happen to contain some of the 
+      // the quadrature points of the current solid cell.
+      for(unsigned int c=0; c<fluid_cells.size(); ++c) 
+	{
+	  fluid_cells[c]->get_dof_indices(dofs_f);
+
+				 // Local FEValues of the
+				 // fluid
+      Quadrature<dim> local_quad(fluid_qpoints[c]);
+      FEValues<dim> local_fe_f_v(fe_f, 
+                                 local_quad,
+                                 update_values |
+                                 update_gradients |
+                                 update_hessians |
+                                 update_JxW_values);
+      local_fe_f_v.reinit(fluid_cells[c]);
+      
+				 // Construction of the values at the quadrature points
+				 // of the current solid cell of the dependent
+				 // variables in the
+				 // fluid, namely,
+				 // u, ut, grad_u, p.
 // 	  local_u.resize(local_quad.size(), std::vector<Type>(dim));
 // 	  local_ut.resize(local_quad.size(),std::vector<Type>(dim));
 // 	  local_grad_u.resize(local_quad.size(), Table<2,Type>(dim,dim));
@@ -1359,51 +1417,51 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // 	  localize_fields(local_ut, local_u, local_grad_u, local_p,
 // 			  local_fe_f_v, local_x);
 // 
-// // ============================================================
-// // Equation in V': Here we assemble all of the terms in the
-// //                 equation in V' that are defined over B.
-// // ------------------------------------------------------------
-// // Equation in Q': Here we assemble all of the terms in the 
-// //                 equation in Q' that are defined over B. 
-// //                 There are two such terms, both pertaining to
-// //                 the solution of the compressible case.
-// //                 These terms concern the removal of the
-// //                 incompressibility condition over B and the
-// //                 construction of a penalty term specifying 
-// //                 the value of the pressure over B.
-// // ------------------------------------------------------------
-// // Equation in Y': Here we assemble all of the terms in the
-// //                 equation in Y' that involve the velocity u.
-// // ============================================================
-// // NOTE: Since the FEValues pertaining to the equations in V'
-// //       and Q' are grouped together, the terms contributing
-// //       to the equations in V' and Q', all of these terms
-// //       are assembled in a single cycle over the dofs of the
-// //       current fluid cell.
-// // ============================================================
-// 
-// 
-// // ****************************************************
-// // Equation in V' and equation in Q'
-// // initialization of residual 
-// // ****************************************************
-// 	  set_to_zero(local_res);
-// // ****************************************************
-// // Equation in V', Equation in Q'
-// // begin cycle over fluid dofs
-// // ****************************************************	  
-// 	  for(unsigned int i=0; i<fe_f.dofs_per_cell;++i) 
-// 	    {
-// 	      comp_i = fe_f.system_to_component_index(i).first;
-// 	      
-// 	      if(comp_i < dim) // Equation in V'
-// 	  	for(unsigned int q=0; q<local_quad.size(); ++q)
-// 	  	  {
-//                     // Quadrature point on the *mapped* solid (Bt)
-// 	  	    unsigned int &qs = fluid_maps[c][q];
-// 	  	    
-// 	  	    // P is the contribution to the first Piola stress of the
-// 	  	    // elastic part of the behavior.
+// ============================================================
+// Equation in V': Here we assemble all of the terms in the
+//                 equation in V' that are defined over B.
+// ------------------------------------------------------------
+// Equation in Q': Here we assemble all of the terms in the 
+//                 equation in Q' that are defined over B. 
+//                 There are two such terms, both pertaining to
+//                 the solution of the compressible case.
+//                 These terms concern the removal of the
+//                 incompressibility condition over B and the
+//                 construction of a penalty term specifying 
+//                 the value of the pressure over B.
+// ------------------------------------------------------------
+// Equation in Y': Here we assemble all of the terms in the
+//                 equation in Y' that involve the velocity u.
+// ============================================================
+// NOTE: Since the FEValues pertaining to the equations in V'
+//       and Q' are grouped together, the terms contributing
+//       to the equations in V' and Q', all of these terms
+//       are assembled in a single cycle over the dofs of the
+//       current fluid cell.
+// ============================================================
+
+
+// ****************************************************
+// Equation in V' and equation in Q'
+// initialization of residual 
+// ****************************************************
+      set_to_zero(local_res);
+      if(update_jacobian) set_to_zero(local_jacobian);
+// ****************************************************
+// Equation in V', Equation in Q'
+// begin cycle over fluid dofs
+// ****************************************************	  
+      for(unsigned int i=0; i<fe_f.dofs_per_cell;++i)
+        {
+          comp_i = fe_f.system_to_component_index(i).first;
+
+          if(comp_i < dim) // Equation in V'
+           for(unsigned int q=0; q<local_quad.size(); ++q)
+             {
+                    // Quadrature point on the *mapped* solid (Bt)
+               unsigned int &qs = fluid_maps[c][q];
+				 // P is the contribution to the first Piola stress of the
+				 // elastic part of the behavior.
 // 		    Table<2,Type>  P = piola(local_F[qs]);
 // 		      
 //             // Contribution due to the elastic component
@@ -1415,8 +1473,9 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // 	  		       local_F[qs](m,l)*
 // 	  		       local_fe_f_v.shape_grad(i,q)[m]*
 // 	  		       fe_v_s.JxW(qs);
-// 	  	  }
-// 	    }
+             }
+        }
+
 // 
 // // ****************************************************
 // // Equation in V' add to global residual
@@ -1462,12 +1521,12 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // 	  apply_constraints(local_res, local_x, dofs_f);
 // 	  distribute(residual, JF, local_res, dofs_f, dofs_s, alpha);
 // 	  
-// // ****************************************************
-// // Equation in V': COMPLETED
-// // Equation in Q': COMPLETED
-// // Equation in Y': COMPLETED
-// // ****************************************************	  
-// 	}
+// ****************************************************
+// Equation in V': COMPLETED
+// Equation in Q': COMPLETED
+// Equation in Y': COMPLETED
+// ****************************************************	  
+	}
 //       
 // // ------------------------------------------------------------
 // // Equation in Y': Here we assemble all of the terms in the
@@ -1494,13 +1553,13 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 //       // global residual.
 //       distribute(residual.block(1), JF.block(1,1),
 // 		 local_res, dofs_s, fe_f.dofs_per_cell, alpha);
-//       
-//  } // Cycle over the cells of the solid domain: END
-// 
-// // ------------------------------------------------------------
-// // OPERATORS DEFINED OVER THE IMMERSED DOMAIN: END 
-// // ------------------------------------------------------------
-//  
+      
+ } // Cycle over the cells of the solid domain: END
+
+// ------------------------------------------------------------
+// OPERATORS DEFINED OVER THE IMMERSED DOMAIN: END 
+// ------------------------------------------------------------
+ 
 }
     
 
@@ -2064,7 +2123,7 @@ void ImmersedFEM<dim>::distribute(Vector<double> &residual,
   for(unsigned int i=0, wi=offset_1; i<dofs.size();++i,++wi)
 	{
 	  residual(dofs[i]) += local_res[wi];
-	  if(!Jacobian.empty())
+	  if( !Jacobian.empty() )
 	   {
 	     for(unsigned int j=0, wj=offset_2; j<dofs.size();++j,++wj) Jacobian.add(dofs[i],dofs[j],local_Jac(wi,wj));
 	    }
@@ -2165,14 +2224,19 @@ void ImmersedFEM<dim>::apply_constraints(vector<double> &local_res,
 						      const Vector<double> &value_of_dofs,
 						      const vector<unsigned int> &dofs)
 {
+  map<unsigned int, double>::iterator it;
+  
   for(unsigned int i=0; i<dofs.size(); ++i) 
     {
-      map<unsigned int, double>::iterator it = par.boundary_values.find(dofs[i]);  
+      it = par.boundary_values.find(dofs[i]);
       if(it != par.boundary_values.end() )
        {
          local_res[i] = scaling * ( value_of_dofs(dofs[i]) - it->second );
-         for(unsigned int j=0; j<dofs.size(); ++j) local_jacobian(i,j) = 0;
-         local_jacobian(i,i) = scaling;
+         if( !local_jacobian.empty() )
+          {
+           for(unsigned int j=0; j<dofs.size(); ++j) local_jacobian(i,j) = 0;
+           local_jacobian(i,i) = scaling;
+          }
        }
     }
 }
