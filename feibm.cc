@@ -497,14 +497,26 @@ class ImmersedFEM
 // 			   const double t);
 
 
-void distribute(Vector<double> &residual,
-						SparseMatrix<double> &Jacobian,
+void distribute_residual(Vector<double> &residual,
 						const std::vector<double> &local_res,
+						const std::vector<unsigned int> &dofs_1,
+						const unsigned int offset_1);
+    
+void distribute_jacobian(SparseMatrix<double> &Jacobian,
 						const FullMatrix<double> &local_Jac,
-						const std::vector<unsigned int> &dofs,
+						const std::vector<unsigned int> &dofs_1,
+						const std::vector<unsigned int> &dofs_2,
 						const unsigned int offset_1,
 						const unsigned int offset_2);
-    
+						
+void get_PFT_and_PFT_Dxi_values(
+                const FESystem<dim,dim> &fe_s,
+                const FEValues<dim,dim> &fe_v_s,
+                const std::vector< unsigned int > &dofs,
+                const Vector<double> &xi, 
+                const bool update_jacobian, 
+                std::vector<Tensor<2,dim,double> > &PFT,
+                std::vector< std::vector<Tensor<2,dim,double> > > & PFT_Dxi);
     
 				     /** Interface to OdeArgument */
     
@@ -1071,13 +1083,6 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   FullMatrix<double> local_jacobian;
   if(update_jacobian) local_jacobian.reinit(n_local_dofs, n_local_dofs); 
 
-//   Vector<double> local_res_double_f(fe_f.dofs_per_cell);
-//   Vector<double> local_res_double_s(fe_s.dofs_per_cell);
-//   FullMatrix<double> local_jac_double_f(fe_f.dofs_per_cell, fe_f.dofs_per_cell);
-//   FullMatrix<double> local_jac_double_s(fe_s.dofs_per_cell, fe_s.dofs_per_cell);
-    
-//  FullMatrix<double> local_jacobian(n_local_dofs, n_local_dofs); 
-  
 // -------------------------------------
 // Since we want to solve a system of equations of the form
 // F(xi', xi, t) = 0, we need to manage the information in
@@ -1260,13 +1265,13 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                         dofs_f);
 				 // Now the contribution to the residual due to the current cell
 				 // is assembled into the global system's residual.
-      distribute(residual.block(0),
-                 JF.block(0,0),
-                 local_res,
-                 local_jacobian,
-                 dofs_f,
-                 0,
-                 0);
+      distribute_residual(residual.block(0), local_res, dofs_f, 0);
+      if( update_jacobian ) distribute_jacobian(JF.block(0,0),
+                                                local_jacobian,
+                                                dofs_f,
+                                                dofs_f,
+                                                0,
+                                                0);
     }
 // ------------------------------------------------------------
 // OPERATORS DEFINED OVER ENTIRE DOMAIN: END 
@@ -1309,20 +1314,18 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   std::vector< std::vector< unsigned int> > fluid_maps;
 
   // Local storage of the
-  // Wt: velocity in the solid
-  // W:  displacement in the solid
-  // div_Wt: divergence of the velocity in the solid
-  // F: deformation gradient in the solid
-  // F_inv: inverse of the deformation gradient
-  // F_dot: material time derivative of the deformation gradient.
-  // J: Jacobian of the deformation gradient
+  //  * velocity in the solid: Wt;
+  //  * displacement in the solid: W;
+  //  * P F^{T}, which is the work conjugate of the velocity gradient when
+  //    measured over the reference configuration: PFT
+  //  * Frechet derivative of PFT with respect to degrees of freedom in a solid
+  //    cell: PFT_Dxi.
   std::vector<Vector<double> > local_Wt(nqps, Vector<double>(dim));
   std::vector<Vector<double> > local_W (nqps, Vector<double>(dim));
-  std::vector<double> local_div_Wt(nqps);
-  std::vector<Tensor<2,dim,double> > local_F    (nqps, Tensor<2,dim,double>());
-  std::vector<Tensor<2,dim,double> > local_F_inv(nqps, Tensor<2,dim,double>());
-  std::vector<Tensor<2,dim,double> > local_F_dot(nqps, Tensor<2,dim,double>());
-  std::vector<double> local_J(nqps);
+  std::vector<Tensor<2,dim,double> > PFT(nqps, Tensor<2,dim,double>());
+  std::vector< std::vector<Tensor<2,dim,double> > > PFT_Dxi;
+  if( update_jacobian )
+  PFT_Dxi.resize(nqps, std::vector< Tensor<2,dim,double> >(fe_s.dofs_per_cell));
 
   // This information is used in finding what fluid cell contain the solid
   // domain at the current time.
@@ -1355,22 +1358,10 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 
 // 						  // Localization of the current independent variables
 // 						  // pertaining to the solid.
-//       localize(local_x, xit.block(1), xi.block(1),
-// 	       fe_f.dofs_per_cell,		  // This is the inner
-// 						  // offset, NOT the
-// 						  // dimension of the
-// 						  // vector
-// 	       n_local_dofs, dofs_s);
-// 
-// 						  // Construction of the values at the quadrature points
-// 						  // of the current solid cell of the dependent
-// 						  // variables in the
-// 						  // solid, namely,
-// 						  // Wt, W, F, Ft,
-// 						  // Finv, J.
-//       localize_fields(local_Wt, local_W, local_F, local_F_dot,
-// 		      local_F_inv, local_J, fe_v_s, local_x);
-//       
+      fe_v_s.get_function_values(xit.block(1), local_Wt);
+      fe_v_s.get_function_values( xi.block(1), local_W);
+      get_PFT_and_PFT_Dxi_values(fe_s, fe_v_s, dofs_s, xi.block(1), update_jacobian, PFT, PFT_Dxi);
+
 				 // Coupling between fluid and solid.
 				 // Identification of the fluid cells containing the
 				 // quadrature points on the current solid cell.
@@ -1400,23 +1391,12 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                  update_hessians |
                                  update_JxW_values);
       local_fe_f_v.reinit(fluid_cells[c]);
-      
+
 				 // Construction of the values at the quadrature points
-				 // of the current solid cell of the dependent
-				 // variables in the
-				 // fluid, namely,
-				 // u, ut, grad_u, p.
-// 	  local_u.resize(local_quad.size(), std::vector<Type>(dim));
-// 	  local_ut.resize(local_quad.size(),std::vector<Type>(dim));
-// 	  local_grad_u.resize(local_quad.size(), Table<2,Type>(dim,dim));
-// 	  local_p.resize(local_quad.size());
-// 					    
-// 	  localize(local_x, xit.block(0), xi.block(0), 0,
-// 		   n_local_dofs, dofs_f);
-// 
-// 	  localize_fields(local_ut, local_u, local_grad_u, local_p,
-// 			  local_fe_f_v, local_x);
-// 
+				 // of the current solid cell of the velocity of the fluid.
+      local_up.resize (local_quad.size(), Vector<double>(dim+1));
+      local_fe_f_v.get_function_values(xi.block(0), local_up);
+
 // ============================================================
 // Equation in V': Here we assemble all of the terms in the
 //                 equation in V' that are defined over B.
@@ -1458,31 +1438,55 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
           if(comp_i < dim) // Equation in V'
            for(unsigned int q=0; q<local_quad.size(); ++q)
              {
-                    // Quadrature point on the *mapped* solid (Bt)
+				 // Quadrature point on the *mapped* solid (Bt)
                unsigned int &qs = fluid_maps[c][q];
-				 // P is the contribution to the first Piola stress of the
-				 // elastic part of the behavior.
-// 		    Table<2,Type>  P = piola(local_F[qs]);
-// 		      
-//             // Contribution due to the elastic component
-//             // of the stress response function in the solid.
-// 	  	    for(unsigned int l=0; l<dim; ++l )
-// 	  	      for(unsigned int m=0; m<dim; ++m )
-// 	  		     local_res[i] += // P F^{T} . grad_x v
-// 	  		       P(comp_i,l)*
-// 	  		       local_F[qs](m,l)*
-// 	  		       local_fe_f_v.shape_grad(i,q)[m]*
-// 	  		       fe_v_s.JxW(qs);
+				 // Contribution due to the elastic component
+				 // of the stress response function in the solid.
+				 // P F^{T} . grad_x v
+               local_res[i] += (PFT[qs][comp_i] * local_fe_f_v.shape_grad(i,q))
+                             * fe_v_s.JxW(qs);
+               if( update_jacobian ) // Recall that the Hessian is symmetric.
+                {
+                  for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )
+                    {
+                      unsigned int wj = j + fe_f.dofs_per_cell;
+                      unsigned int comp_j =
+                                       fe_s.system_to_component_index(j).first;
+                      local_jacobian(i,wj) 
+                       += ( PFT_Dxi[qs][j][comp_i]
+                           *
+                            local_fe_f_v.shape_grad(i,q) )
+                        * fe_v_s.JxW(qs)
+                        + ( PFT[qs][comp_i]
+                           *
+                            local_fe_f_v.shape_hessian(i,q)[comp_j])
+                        * fe_v_s.shape_value(j,qs)
+                        * fe_v_s.JxW(qs);
+                    }
+                }
              }
         }
 
 // 
-// // ****************************************************
-// // Equation in V' add to global residual
-// // ****************************************************
-// 	  apply_constraints(local_res, local_x, dofs_f);
-// 	  distribute(residual, JF, local_res,
-// 		     dofs_f, dofs_s, alpha);
+// ****************************************************
+// Equation in V' add to global residual
+// ****************************************************
+      apply_constraints(local_res,
+                        local_jacobian,
+                        xi.block(0),
+                        dofs_f);
+      distribute_residual(residual.block(0),
+                          local_res,
+                          dofs_f,
+                          0);
+
+      if( update_jacobian ) distribute_jacobian(JF.block(0,1),
+                                                local_jacobian,
+                                                dofs_f,
+                                                dofs_s,
+                                                0,
+                                                fe_f.dofs_per_cell);
+                             
 // // ****************************************************
 // // Equation in V': COMPLETED
 // // Equation in Y': NOT YET COMPLETED
@@ -1493,66 +1497,129 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // // Equation in Y'
 // // initialization of residual 
 // // ****************************************************
-// 	  set_to_zero(local_res);
-// 
+      set_to_zero(local_res);
+      if(update_jacobian) set_to_zero(local_jacobian);
 // // ****************************************************
 // // Equation in Y'
 // // begin cycle over solid dofs
 // // ****************************************************	  
-// 	  for(unsigned int i=0; i<fe_s.dofs_per_cell;++i) 
-// 	    {
-// 	      unsigned int wi=i+fe_f.dofs_per_cell;
-// 	      comp_i = fe_s.system_to_component_index(i).first;
-// 	      for(unsigned int q=0; q<local_quad.size(); ++q)
-// 		{
-// 		  unsigned int &qs = fluid_maps[c][q];
-// 
-// 		  local_res[wi] +=  // - u . y
-// 		    -local_u[q][comp_i]*
-// 		    fe_v_s.shape_value(i,qs)*
-// 		    fe_v_s.JxW(qs);
-// 		}
-// 	    }
-// 
-// // ****************************************************
-// // Equation in Y'
-// // add to global residual
-// // ****************************************************
-// 	  apply_constraints(local_res, local_x, dofs_f);
-// 	  distribute(residual, JF, local_res, dofs_f, dofs_s, alpha);
-// 	  
+      for(unsigned int i=0; i<fe_s.dofs_per_cell;++i) 
+        {
+          unsigned int wi = i + fe_f.dofs_per_cell;
+          comp_i = fe_s.system_to_component_index(i).first;
+          for(unsigned int q=0; q<local_quad.size(); ++q)
+            {
+              unsigned int &qs = fluid_maps[c][q];
+				 // - u . y
+              local_res[wi] -= local_up[q](comp_i)
+                             * fe_v_s.shape_value(i,qs)
+                             * fe_v_s.JxW(qs);
+              if( update_jacobian )
+               for(unsigned int j = 0; j < fe_f.dofs_per_cell; ++j)
+                 {
+                   comp_j = fe_f.system_to_component_index(j).first;
+                   if( comp_i == comp_j )
+                    {
+                      local_jacobian(wi,j) -= fe_v_s.shape_value(i,qs)
+                                            * local_fe_f_v.shape_value(j,q)
+                                            * fe_v_s.JxW(qs);
+                      for(unsigned int k = 0; k < fe_s.dofs_per_cell; ++k)
+                        {
+                          unsigned int wk = k + fe_f.dofs_per_cell;
+                          unsigned int comp_k = fe_s.system_to_component_index(k).first;
+                          local_jacobian(wi,wk)
+                             -= fe_v_s.shape_value(i,qs)
+                              * fe_v_s.shape_value(k,qs)
+                              * local_fe_f_v.shape_grad(j,q)[comp_k]
+                              * xi.block(0)(dofs_f[j])
+                              * fe_v_s.JxW(qs);
+                        }
+                    }
+                 }
+            }
+        }
+
+// ****************************************************
+// Equation in Y'
+// add to global residual
+// ****************************************************
+      apply_constraints(local_res,
+                        local_jacobian,
+                        xi.block(0),
+                        dofs_f);
+      distribute_residual(residual.block(1),
+                          local_res,
+                          dofs_s,
+                          fe_f.dofs_per_cell);
+      if( update_jacobian )
+       {
+         distribute_jacobian(JF.block(1,0),
+                             local_jacobian,
+                             dofs_s,
+                             dofs_f,
+                             fe_f.dofs_per_cell,
+                             0);
+         distribute_jacobian(JF.block(1,1),
+                             local_jacobian,
+                             dofs_s,
+                             dofs_s,
+                             fe_f.dofs_per_cell,
+                             fe_f.dofs_per_cell);
+       }
+
+	  
 // ****************************************************
 // Equation in V': COMPLETED
 // Equation in Q': COMPLETED
 // Equation in Y': COMPLETED
 // ****************************************************	  
-	}
+    }
 //       
 // // ------------------------------------------------------------
 // // Equation in Y': Here we assemble all of the terms in the
 // //                 equation in Y' that involve w_dot.
 //       // As always, we start by initializing the contribution to the
 //       // local residual.
-//       set_to_zero(local_res);
-//       
-//       // begin cycle over solid dofs
-//       for(unsigned int i=0; i<fe_s.dofs_per_cell; ++i) 
-// 	{
-// 	  comp_i = fe_s.system_to_component_index(i).first;
-// 	  unsigned int wi = i+fe_f.dofs_per_cell;
-// 	  for(unsigned int qs=0; qs<nqps; ++qs) 
-// 	    {
-// 	      local_res[wi] += // Wt . Y				 
-// 		     local_Wt[qs][comp_i]*
-// 		     fe_v_s.shape_value(i,qs)*
-// 		     fe_v_s.JxW(qs);
-// 
-// 	    }
-// 	}
-//       // As always, now assemble the contribution just computed into the
-//       // global residual.
-//       distribute(residual.block(1), JF.block(1,1),
-// 		 local_res, dofs_s, fe_f.dofs_per_cell, alpha);
+      set_to_zero(local_res);
+      if(update_jacobian) set_to_zero(local_jacobian);
+      
+      // begin cycle over solid dofs
+      for(unsigned int i=0; i<fe_s.dofs_per_cell; ++i) 
+    {
+      comp_i = fe_s.system_to_component_index(i).first;
+      unsigned int wi = i + fe_f.dofs_per_cell;
+      for(unsigned int qs=0; qs<nqps; ++qs) 
+        {
+				// Wt . Y
+          local_res[wi] += local_Wt[qs](comp_i)
+                         * fe_v_s.shape_value(i,qs)
+                         * fe_v_s.JxW(qs);
+          if( update_jacobian )
+           for(unsigned int j=0; j<fe_s.dofs_per_cell; ++j)
+             {
+               comp_j = fe_s.system_to_component_index(j).first;
+               unsigned int wj = j + fe_f.dofs_per_cell;
+               if( comp_i == comp_j )
+                local_jacobian(wi,wj) += alpha
+                                       * fe_v_s.shape_value(i,qs)
+                                       * fe_v_s.shape_value(j,qs)
+                                       * fe_v_s.JxW(qs);
+             }
+
+	    }
+	}
+      // As always, now assemble the contribution just computed into the
+      // global residual.
+      distribute_residual(residual.block(1),
+                          local_res,
+                          dofs_s,
+                          fe_f.dofs_per_cell);
+      if( update_jacobian ) distribute_jacobian(JF.block(1,1),
+                                                local_jacobian,
+                                                dofs_s,
+                                                dofs_s,
+                                                fe_f.dofs_per_cell,
+                                                fe_f.dofs_per_cell);
       
  } // Cycle over the cells of the solid domain: END
 
@@ -2012,6 +2079,47 @@ void ImmersedFEM<dim>::output_step (const double t,
 //   return P;
 // }
 
+template <int dim>
+void ImmersedFEM<dim>::get_PFT_and_PFT_Dxi_values(
+                const FESystem<dim,dim> &fe_s,
+                const FEValues<dim,dim> &fe_v_s,
+                const std::vector< unsigned int > &dofs,
+                const Vector<double> &xi, 
+                const bool update_jacobian, 
+                std::vector<Tensor<2,dim,double> > &PFT,
+                std::vector< std::vector<Tensor<2,dim,double> > > & PFT_Dxi)
+{
+  std::vector< std::vector< Tensor<1,dim> > > H(PFT.size(), std::vector< Tensor<1,dim> >(dim));
+  fe_v_s.get_function_gradients(xi, H);
+  
+  for( unsigned int qs = 0; qs < PFT.size(); ++qs )
+    {
+      for( unsigned int i = 0; i < dim; ++i )
+        for( unsigned int j = 0; j < dim; ++j )
+          {
+            PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]);
+            PFT[qs][i][j] *= par.mu;
+
+            if( update_jacobian )
+             {
+               for( unsigned int k = 0; k < fe_s.dofs_per_cell; ++k )
+                 {
+                   PFT_Dxi[qs][k][i][j] = 0;
+                   unsigned int comp_k = fe_s.system_to_component_index(k).first;
+                   if( i == comp_k )
+                   PFT_Dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs)[j]
+                                         + fe_v_s.shape_grad(k,qs) * H[qs][j];
+                   if( j == comp_k )
+                   PFT_Dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs)[i]
+                                         + fe_v_s.shape_grad(k,qs) * H[qs][i];
+                   PFT_Dxi[qs][k][i][j] *= par.mu;
+                 }
+             }
+          }
+    }
+  
+}
+
 // template <int dim>
 // template <class Type>
 // Table<2,Type> ImmersedFEM<dim>::deviatoric
@@ -2111,22 +2219,30 @@ void ImmersedFEM<dim>::output_step (const double t,
   
 
 template <int dim>
-void ImmersedFEM<dim>::distribute(Vector<double> &residual,
-						SparseMatrix<double> &Jacobian,
+void ImmersedFEM<dim>::distribute_residual(Vector<double> &residual,
 						const std::vector<double> &local_res,
+						const std::vector<unsigned int> &dofs_1,
+						const unsigned int offset_1)
+{
+
+  for(unsigned int i=0, wi=offset_1; i<dofs_1.size();++i,++wi)
+    {
+      residual(dofs_1[i]) += local_res[wi];
+    }
+}
+
+template <int dim>
+void ImmersedFEM<dim>::distribute_jacobian(SparseMatrix<double> &Jacobian,
 						const FullMatrix<double> &local_Jac,
-						const std::vector<unsigned int> &dofs,
+						const std::vector<unsigned int> &dofs_1,
+						const std::vector<unsigned int> &dofs_2,
 						const unsigned int offset_1,
 						const unsigned int offset_2)
 {
 
-  for(unsigned int i=0, wi=offset_1; i<dofs.size();++i,++wi)
-	{
-	  residual(dofs[i]) += local_res[wi];
-	  if( !Jacobian.empty() )
-	   {
-	     for(unsigned int j=0, wj=offset_2; j<dofs.size();++j,++wj) Jacobian.add(dofs[i],dofs[j],local_Jac(wi,wj));
-	    }
+  for(unsigned int i=0, wi=offset_1; i<dofs_1.size();++i,++wi)
+    {
+      for(unsigned int j=0, wj=offset_2; j<dofs_2.size();++j,++wj) Jacobian.add(dofs_1[i],dofs_2[j],local_Jac(wi,wj));
     }
 }
 
@@ -2224,17 +2340,16 @@ void ImmersedFEM<dim>::apply_constraints(vector<double> &local_res,
 						      const Vector<double> &value_of_dofs,
 						      const vector<unsigned int> &dofs)
 {
-  map<unsigned int, double>::iterator it;
   
   for(unsigned int i=0; i<dofs.size(); ++i) 
     {
-      it = par.boundary_values.find(dofs[i]);
+      map<unsigned int,double>::iterator it = par.boundary_values.find(dofs[i]);
       if(it != par.boundary_values.end() )
        {
          local_res[i] = scaling * ( value_of_dofs(dofs[i]) - it->second );
          if( !local_jacobian.empty() )
           {
-           for(unsigned int j=0; j<dofs.size(); ++j) local_jacobian(i,j) = 0;
+           for(unsigned int j=0; j<local_jacobian.n(); ++j) local_jacobian(i,j) = 0;
            local_jacobian(i,i) = scaling;
           }
        }
