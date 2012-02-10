@@ -1457,8 +1457,10 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                        += ( PFT_Dxi[qs][j][comp_i]
                            *
                             local_fe_f_v.shape_grad(i,q) )
-                        * fe_v_s.JxW(qs)
-                        + ( PFT[qs][comp_i]
+                        * fe_v_s.JxW(qs);
+                      if( !par.semi_implicit )
+                       local_jacobian(i,wj)
+                        += ( PFT[qs][comp_i]
                            *
                             local_fe_f_v.shape_hessian(i,q)[comp_j])
                         * fe_v_s.shape_value(j,qs)
@@ -1488,22 +1490,21 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                                 0,
                                                 fe_f.dofs_per_cell);
                              
-// // ****************************************************
-// // Equation in V': COMPLETED
-// // Equation in Y': NOT YET COMPLETED
-// // ****************************************************
-// 
-// 		     
-// // ****************************************************
-// // Equation in Y'
-// // initialization of residual 
-// // ****************************************************
+// ****************************************************
+// Equation in V': COMPLETED
+// Equation in Y': NOT YET COMPLETED
+// ****************************************************
+
+// ****************************************************
+// Equation in Y'
+// initialization of residual 
+// ****************************************************
       set_to_zero(local_res);
       if(update_jacobian) set_to_zero(local_jacobian);
-// // ****************************************************
-// // Equation in Y'
-// // begin cycle over solid dofs
-// // ****************************************************	  
+// ****************************************************
+// Equation in Y'
+// begin cycle over solid dofs
+// ****************************************************	  
       for(unsigned int i=0; i<fe_s.dofs_per_cell;++i) 
         {
           unsigned int wi = i + fe_f.dofs_per_cell;
@@ -1524,6 +1525,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                       local_jacobian(wi,j) -= fe_v_s.shape_value(i,qs)
                                             * local_fe_f_v.shape_value(j,q)
                                             * fe_v_s.JxW(qs);
+                      if( !par.semi_implicit )
                       for(unsigned int k = 0; k < fe_s.dofs_per_cell; ++k)
                         {
                           unsigned int wk = k + fe_f.dofs_per_cell;
@@ -1560,12 +1562,12 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                              dofs_f,
                              fe_f.dofs_per_cell,
                              0);
-         distribute_jacobian(JF.block(1,1),
-                             local_jacobian,
-                             dofs_s,
-                             dofs_s,
-                             fe_f.dofs_per_cell,
-                             fe_f.dofs_per_cell);
+         if( !par.semi_implicit ) distribute_jacobian(JF.block(1,1),
+                                                      local_jacobian,
+                                                      dofs_s,
+                                                      dofs_s,
+                                                      fe_f.dofs_per_cell,
+                                                      fe_f.dofs_per_cell);
        }
 
 	  
@@ -1876,8 +1878,7 @@ ImmersedFEM<dim>::run()
        previous_xi = current_xi;
        solution = current_xi;
        output_step(t, solution, time_step, par.dt);
-//       update_Jacobian = par.update_jacobian_continuously;
-       update_Jacobian = true;
+       update_Jacobian = par.update_jacobian_continuously;
        
      } // End of the cycle over time.
 
