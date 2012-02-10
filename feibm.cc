@@ -535,6 +535,8 @@ void get_PFT_and_PFT_Dxi_values(
 
     template<class Type>
     inline void set_to_zero(std::vector<Type> &v) const;
+    
+    double norm(const std::vector<double> &v);
 
 
 };
@@ -1176,7 +1178,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                            * fe_f_v.JxW(q);
              if(update_jacobian) 
              {
-               for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+               for(unsigned int j=0; j<fe_f.dofs_per_cell;++j)
                  {
                    comp_j = fe_f.system_to_component_index(j).first;
                    if( comp_i == comp_j )
@@ -1209,7 +1211,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
             }
           if( update_jacobian )
            {
-             for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+             for(unsigned int j=0; j<fe_f.dofs_per_cell;++j)
               {
                 comp_j = fe_f.system_to_component_index(j).first;
                 if( comp_j == comp_i )
@@ -1247,7 +1249,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                              * fe_f_v.shape_value(i,q)
                              * fe_f_v.JxW(q);
              if( update_jacobian )
-              for(unsigned int j=0; i<fe_f.dofs_per_cell;++j)
+              for(unsigned int j=0; j<fe_f.dofs_per_cell;++j)
                {
                  comp_j = fe_f.system_to_component_index(j).first;
                  if( comp_j < dim )
@@ -1257,7 +1259,6 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                }
            }
         }
-
 				 // Apply boundary conditions.
       apply_constraints(local_res,
                         local_jacobian,
@@ -1273,10 +1274,10 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                                 0,
                                                 0);
     }
+
 // ------------------------------------------------------------
 // OPERATORS DEFINED OVER ENTIRE DOMAIN: END 
 // ------------------------------------------------------------
-
 
 // ------------------------------------------------------------
 // OPERATORS DEFINED OVER THE IMMERSED DOMAIN: BEGIN 
@@ -1795,6 +1796,7 @@ ImmersedFEM<dim>::run()
         {
 					// Determine the residual and the Jacobian of the residual.
          residual_and_or_Jacobian (current_res, JF, current_xit, current_xi, 1./par.dt, t);
+         const double res_norm = current_res.l2_norm();
 					// Compute the inverse of the Jacobian.
          JF_inv.initialize(JF);
 					// Reset the "update_Jacobian" variable to the value
@@ -1874,7 +1876,8 @@ ImmersedFEM<dim>::run()
        previous_xi = current_xi;
        solution = current_xi;
        output_step(t, solution, time_step, par.dt);
-       update_Jacobian = par.update_jacobian_continuously;
+//       update_Jacobian = par.update_jacobian_continuously;
+       update_Jacobian = true;
        
      } // End of the cycle over time.
 
@@ -2224,7 +2227,6 @@ void ImmersedFEM<dim>::distribute_residual(Vector<double> &residual,
 						const std::vector<unsigned int> &dofs_1,
 						const unsigned int offset_1)
 {
-
   for(unsigned int i=0, wi=offset_1; i<dofs_1.size();++i,++wi)
     {
       residual(dofs_1[i]) += local_res[wi];
@@ -2396,7 +2398,13 @@ void ImmersedFEM<dim>::set_to_zero (Table<2, Type> &v) const
       set_to_zero(v(i,j));
 }
 
-
+template <int dim>
+double ImmersedFEM<dim>::norm(const std::vector<double> &v)
+{
+  double norm = 0;
+  for( unsigned int i = 0; i < v.size(); ++i) norm += v[i]*v[i];
+  return norm = sqrt(norm);
+}
 
 
 
