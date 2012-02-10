@@ -14,8 +14,8 @@ target = feibm
 # run-time checking of parameters and internal states is performed, so
 # you should set this value to `on' while you develop your program,
 # and to `off' when running production computations.
-#debug-mode = on
-debug-mode = off
+debug-mode = on
+#debug-mode = off
 
 # As third field, we need to give the path to the top-level deal.II
 # directory. You need to adjust this to your needs. Since this path is

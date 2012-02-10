@@ -1361,6 +1361,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // 						  // pertaining to the solid.
       fe_v_s.get_function_values(xit.block(1), local_Wt);
       fe_v_s.get_function_values( xi.block(1), local_W);
+      if(par.mu != 0 )
       get_PFT_and_PFT_Dxi_values(fe_s, fe_v_s, dofs_s, xi.block(1), update_jacobian, PFT, PFT_Dxi);
 
 				 // Coupling between fluid and solid.
@@ -1426,6 +1427,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
 // Equation in V' and equation in Q'
 // initialization of residual 
 // ****************************************************
+if(par.mu != 0){
       set_to_zero(local_res);
       if(update_jacobian) set_to_zero(local_jacobian);
 // ****************************************************
@@ -1489,7 +1491,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                                 dofs_s,
                                                 0,
                                                 fe_f.dofs_per_cell);
-                             
+}                             
 // ****************************************************
 // Equation in V': COMPLETED
 // Equation in Y': NOT YET COMPLETED

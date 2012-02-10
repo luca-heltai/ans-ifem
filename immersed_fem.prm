@@ -3,17 +3,17 @@
 set Delta t                        = .025
 set Density                        = 1
 set Dirichlet BC indicator         = 0
-set Elastic modulus                = 1
+set Elastic modulus                = 0
 set Final t                        = 2
 set Fix one dof of p               = false
 set Fluid mesh                     = mesh/fluid_square.inp
 set Fluid refinement               = 5
 set Output base name               = out/square
-set Semi-implicit scheme           = true
+set Semi-implicit scheme           = false
 set Solid mesh                     = mesh/solid_square.inp
 set Solid refinement               = 3
 set Update J cont                  = false
-set Velocity finite element degree = 2
+set Velocity finite element degree = 3
 set Viscosity                      = 1
 set Zero residual stress           = true
 
