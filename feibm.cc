@@ -121,6 +121,9 @@ class ProblemParameters :
 				     //! Final time.
     double T;
 
+				     //! Dimensional constant for the velocity of the solid Eq.
+    double Phi_B;
+
 				     /** Displacement field of the immersed solid
 				     at the initial time. */
     ParsedFunction<dim> W_0;
@@ -171,14 +174,13 @@ class ProblemParameters :
  				     integration scheme must be semi-implicit. */
     bool semi_implicit;
 
- 				     /** Flag to indicate whether or not
- 				     the stress state in the reference configuration of the
- 				     solid must be equal to zero. */
-    bool zero_residual_stress;
-
  				     /** Flag to indicate how to deal with the
  				     non-uniqueness of the pressure field. */
     bool fix_pressure;
+    
+ 				     /** When set to true, an update of the system Jacobian is
+ 				     performed at the beginning of each time step. */
+    bool update_jacobian_at_step_beginning;
     
  				     //! Name of the mesh file for the solid domain.
     string solid_mesh;
@@ -226,11 +228,13 @@ ProblemParameters<dim>::ProblemParameters() :
   this->declare_entry("Delta t", ".1", Patterns::Double());
   this->declare_entry("Final t", "1", Patterns::Double());
   this->declare_entry("Update J cont", "false", Patterns::Bool());
+  this->declare_entry("Force J update at step beginning","false",
+                      Patterns::Bool());
   this->declare_entry("Density", "1", Patterns::Double());
   this->declare_entry("Viscosity", "1", Patterns::Double());
   this->declare_entry("Elastic modulus", "1", Patterns::Double());
+  this->declare_entry("Phi_B", "1", Patterns::Double());
   this->declare_entry("Semi-implicit scheme", "true", Patterns::Bool());
-  this->declare_entry("Zero residual stress", "true", Patterns::Bool());
   this->declare_entry("Fix one dof of p", "false", Patterns::Bool());
   this->declare_entry("Solid mesh", "mesh/solid.inp", Patterns::Anything());
   this->declare_entry("Fluid mesh", "mesh/fluid.inp", Patterns::Anything());
@@ -262,14 +266,15 @@ ProblemParameters<dim>::ProblemParameters() :
   dt = this->get_double("Delta t");
   T = this->get_double("Final t");
   update_jacobian_continuously = this->get_bool("Update J cont");
+  update_jacobian_at_step_beginning = this->get_bool("Force J update at step beginning");
 
   rho = this->get_double("Density");
   eta = this->get_double("Viscosity");
 
   mu = this->get_double("Elastic modulus");
+  Phi_B = this->get_double("Phi_B");
 
   semi_implicit = this->get_bool("Semi-implicit scheme");
-  zero_residual_stress = this->get_bool("Zero residual stress");
   fix_pressure = this->get_bool("Fix one dof of p");
   
   solid_mesh = this->get("Solid mesh");
@@ -1390,8 +1395,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                  local_quad,
                                  update_values |
                                  update_gradients |
-                                 update_hessians |
-                                 update_JxW_values);
+                                 update_hessians);
       local_fe_f_v.reinit(fluid_cells[c]);
 
 				 // Construction of the values at the quadrature points
@@ -1484,7 +1488,6 @@ if(par.mu != 0){
                           local_res,
                           dofs_f,
                           0);
-
       if( update_jacobian ) distribute_jacobian(JF.block(0,1),
                                                 local_jacobian,
                                                 dofs_f,
@@ -1515,7 +1518,8 @@ if(par.mu != 0){
             {
               unsigned int &qs = fluid_maps[c][q];
 				 // - u . y
-              local_res[wi] -= local_up[q](comp_i)
+              local_res[wi] -= par.Phi_B 
+                             * local_up[q](comp_i)
                              * fe_v_s.shape_value(i,qs)
                              * fe_v_s.JxW(qs);
               if( update_jacobian )
@@ -1524,7 +1528,8 @@ if(par.mu != 0){
                    comp_j = fe_f.system_to_component_index(j).first;
                    if( comp_i == comp_j )
                     {
-                      local_jacobian(wi,j) -= fe_v_s.shape_value(i,qs)
+                      local_jacobian(wi,j) -= par.Phi_B 
+                                            * fe_v_s.shape_value(i,qs)
                                             * local_fe_f_v.shape_value(j,q)
                                             * fe_v_s.JxW(qs);
                       if( !par.semi_implicit )
@@ -1533,7 +1538,8 @@ if(par.mu != 0){
                           unsigned int wk = k + fe_f.dofs_per_cell;
                           unsigned int comp_k = fe_s.system_to_component_index(k).first;
                           local_jacobian(wi,wk)
-                             -= fe_v_s.shape_value(i,qs)
+                             -= par.Phi_B 
+                              * fe_v_s.shape_value(i,qs)
                               * fe_v_s.shape_value(k,qs)
                               * local_fe_f_v.shape_grad(j,q)[comp_k]
                               * xi.block(0)(dofs_f[j])
@@ -1596,7 +1602,8 @@ if(par.mu != 0){
       for(unsigned int qs=0; qs<nqps; ++qs) 
         {
 				// Wt . Y
-          local_res[wi] += local_Wt[qs](comp_i)
+          local_res[wi] += par.Phi_B
+                         * local_Wt[qs](comp_i)
                          * fe_v_s.shape_value(i,qs)
                          * fe_v_s.JxW(qs);
           if( update_jacobian )
@@ -1605,7 +1612,8 @@ if(par.mu != 0){
                comp_j = fe_s.system_to_component_index(j).first;
                unsigned int wj = j + fe_f.dofs_per_cell;
                if( comp_i == comp_j )
-                local_jacobian(wi,wj) += alpha
+                local_jacobian(wi,wj) += par.Phi_B
+                                       * alpha
                                        * fe_v_s.shape_value(i,qs)
                                        * fe_v_s.shape_value(j,qs)
                                        * fe_v_s.JxW(qs);
@@ -1800,7 +1808,6 @@ ImmersedFEM<dim>::run()
         {
 					// Determine the residual and the Jacobian of the residual.
          residual_and_or_Jacobian (current_res, JF, current_xit, current_xi, 1./par.dt, t);
-         const double res_norm = current_res.l2_norm();
 					// Compute the inverse of the Jacobian.
          JF_inv.initialize(JF);
 					// Reset the "update_Jacobian" variable to the value
@@ -1814,7 +1821,7 @@ ImmersedFEM<dim>::run()
         }
 					// Is the residual equal to zero?
        const double res_norm = current_res.l2_norm();
-       if(std::fabs(res_norm) < 1e-10)
+       if( res_norm < 1e-10 )
         {
 					// Since the residual is equal zero, make a note and
 					// advance to the next step.
@@ -1881,6 +1888,7 @@ ImmersedFEM<dim>::run()
        solution = current_xi;
        output_step(t, solution, time_step, par.dt);
        update_Jacobian = par.update_jacobian_continuously;
+       if(par.update_jacobian_at_step_beginning) update_Jacobian = true;
        
      } // End of the cycle over time.
 
