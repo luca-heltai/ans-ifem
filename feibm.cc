@@ -177,6 +177,9 @@ class ProblemParameters :
  				     /** Flag to indicate how to deal with the
  				     non-uniqueness of the pressure field. */
     bool fix_pressure;
+				    /** Flag to indicate whether Dirichlet boundary conditions
+				  need to be applied on the all boundaries of the control volume*/
+    bool all_DBC;
     
  				     /** When set to true, an update of the system Jacobian is
  				     performed at the beginning of each time step. */
@@ -240,6 +243,7 @@ ProblemParameters<dim>::ProblemParameters() :
   this->declare_entry("Fluid mesh", "mesh/fluid.inp", Patterns::Anything());
   this->declare_entry("Output base name", "out/square", Patterns::Anything());
   this->declare_entry("Dirichlet BC indicator", "1", Patterns::Integer(0,254));
+   this->declare_entry("All Dirichlet BC", "true", Patterns::Bool());
 
  				     /** Specification of the parmeter file. */  
   this->read_input("immersed_fem.prm");
@@ -282,6 +286,7 @@ ProblemParameters<dim>::ProblemParameters() :
   output_name = this->get("Output base name");
 
   unsigned char id = this->get_integer("Dirichlet BC indicator");
+   all_DBC = this->get_bool("All Dirichlet BC");
 
   component_mask[dim] = false;
   static ZeroFunction<dim> zero(dim+1);
@@ -440,6 +445,16 @@ class ImmersedFEM
     double scaling;
 
     double previous_time;
+   
+   /*-----------------------------------------*/
+				    //The first dof pertaining to pressure field
+   unsigned int constraining_dof;
+				  //Set to store the dofs corresponding to the pressure field 
+   set<unsigned int> pressure_dofs;
+/*------------------------------------------*/
+
+				  //Area of the control volume
+   double area;
 
     std::ofstream global_info_file;
 
@@ -476,8 +491,8 @@ class ImmersedFEM
 				     // system. 
     void assemble_sparsity(Mapping<dim, dim> &mapping);
 
-    void assemble_zero_mean_value_constraints();
-    
+    /*void assemble_zero_mean_value_constraints();*/
+    void  get_area_and_first_pressure_dof();
     
     void residual_and_or_Jacobian(BlockVector<double> &residual,
 				    BlockSparseMatrix<double> &Jacobian,
@@ -513,6 +528,15 @@ void distribute_jacobian(SparseMatrix<double> &Jacobian,
 						const std::vector<unsigned int> &dofs_2,
 						const unsigned int offset_1,
 						const unsigned int offset_2);
+ /*--------------------------------*/  
+  void distribute_constraint_on_pressure(Vector<double> &residual,
+										 const double average_pressure);
+ 
+   void distribute_constraint_on_pressure( SparseMatrix<double> &jacobian,
+										  const vector<double> &pressure_coefficient,
+										  const vector<unsigned int> &dofs,
+										  const unsigned int offset);
+/*----------------------------------*/
 						
 void get_PFT_and_PFT_Dxi_values(
                 const FESystem<dim,dim> &fe_s,
@@ -551,7 +575,7 @@ template <int dim>
 ImmersedFEM<dim>::ImmersedFEM(ProblemParameters<dim> &par)
 		:
 		par(par),
-		fe_f(FE_Q<dim>(par.degree), dim, FE_DGP<dim>(par.degree-1), 1),
+		fe_f(FE_Q<dim>(par.degree), dim, FE_Q<dim>(par.degree-1), 1),/* Changed FE_DGP to FE_Q*/
 		fe_s(FE_Q<dim, dim>(par.degree), dim),
 		dh_f(tria_f),
 		dh_s(tria_s),
@@ -611,7 +635,7 @@ ImmersedFEM<dim>::compute_current_bc(const double t)
 				   // Find the first pressure dof
     if(par.fix_pressure == true)
      {
-       vector<unsigned int> dofs(fe_f.dofs_per_cell);
+     /*  vector<unsigned int> dofs(fe_f.dofs_per_cell);
        dh_f.begin_active()->get_dof_indices(dofs);
        unsigned int id=0;
 
@@ -619,8 +643,8 @@ ImmersedFEM<dim>::compute_current_bc(const double t)
         {
           if(fe_f.system_to_component_index(id).first == dim) break;
           else ++id;
-        }
-       par.boundary_values[dofs[id]] = 0;
+        }*/
+       par.boundary_values[constraining_dof] = 0;
      }
 }
 
@@ -761,7 +785,10 @@ create_triangulation_and_dofs ()
 				     // of the zero-average were built into the constraint
 				     // matrix this constraint would have to be built before
 				     // closing the constraint matrix.
-  assemble_zero_mean_value_constraints();
+  /* Instead of assemble_zero_mean_value_constraints(); we use a different function
+   that calculates the area of the control volume as well as the first dof of the pressure*/
+  get_area_and_first_pressure_dof();
+   
   constraints_f.close();
   constraints_s.close();
   
@@ -829,6 +856,15 @@ create_triangulation_and_dofs ()
     coupling(dim, dim) = DoFTools::always;
     // Why not use coupling.fill(DoFTools::always) ?
     
+	 /*---------------------------------------------------*/
+	 set<unsigned int>::iterator it = pressure_dofs.begin();
+	 constraining_dof = *it;
+	 for(++it; it != pressure_dofs.end(); ++it)
+	 {
+		csp.block(0,0).add(constraining_dof, *it);//Just to create the proper sparsity pattern
+	 }  
+	 /*----------------------------------------------------*/
+	 
     DoFTools::make_sparsity_pattern (dh_f, coupling,
 				     csp.block(0,0),
 				     constraints_f,
@@ -897,6 +933,43 @@ assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
 template <int dim>
 void
 ImmersedFEM<dim>::
+ get_area_and_first_pressure_dof()
+{
+   area = 0.0;
+   typename DoFHandler<dim,dim>::active_cell_iterator
+   cell = dh_f.begin_active(),
+   endc = dh_f.end();
+      
+   FEValues<dim,dim> fe_v(fe_f, quad_f,
+						  update_values |
+						  update_JxW_values);
+  
+   std::vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
+
+   //Calculate the area of the control volume   
+   for(; cell != endc; ++cell) 
+   {
+      fe_v.reinit(cell);
+      cell->get_dof_indices(dofs_f);
+	
+      for(unsigned int i=0; i < fe_f.dofs_per_cell; ++i)
+	  {
+		 unsigned int comp_i = fe_f.system_to_component_index(i).first;
+		 if(comp_i == dim)  pressure_dofs.insert(dofs_f[i]);
+
+	  }
+	  for(unsigned int q=0; q<quad_f.size(); ++q)
+		 area += fe_v.JxW(q);
+   }
+   
+   //Get the first dof pertaining to pressure
+   constraining_dof = *(pressure_dofs.begin());
+
+}
+/*
+template <int dim>
+void
+ImmersedFEM<dim>::
 assemble_zero_mean_value_constraints () 
 {
   typename DoFHandler<dim,dim>::active_cell_iterator
@@ -929,6 +1002,7 @@ assemble_zero_mean_value_constraints ()
 	    {
 	      for(unsigned int q=0; q<quad_f.size(); ++q)
 		local_C(i) += fe_v.shape_value(i,q)*fe_v.JxW(q);
+
 	    }
 	}
       
@@ -940,7 +1014,7 @@ assemble_zero_mean_value_constraints ()
     }
   pressure_average /= area;
 }  
-
+*/
 
 // template <int dim>
 // void
@@ -1118,6 +1192,11 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   std::vector< std::vector< Tensor<1,dim> > > local_grad_up(nqpf, std::vector< Tensor<1,dim> >(dim+1));
 
   unsigned int comp_i = 0, comp_j = 0;
+   
+   /*-----------------------------------------------------------------------*/
+   double local_average_pressure = 0.0;
+   vector<double> local_pressure_coefficient(n_local_dofs);
+   /*------------------------------------------------------------------------*/
   
 // ------------------------------------------------------------
 // OPERATORS DEFINED OVER THE ENTIRE DOMAIN: BEGIN 
@@ -1161,7 +1240,12 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
       // Initialization of the local residual and local jacobian.
       set_to_zero(local_res);
       if(update_jacobian) set_to_zero(local_jacobian);
-
+	   
+	   /*------------------------------------------------*/
+	   local_average_pressure = 0.0;
+	   set_to_zero(local_pressure_coefficient);
+	   /*------------------------------------------------*/
+	   
       for(unsigned int i=0; i<fe_f.dofs_per_cell;++i) 
         {
           comp_i = fe_f.system_to_component_index(i).first;
@@ -1262,6 +1346,17 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                        * fe_f_v.shape_grad(j,q)[comp_j]
                                        * fe_f_v.JxW(q);
                }
+			  /*----------------------------------------------------*/
+			  if (par.all_DBC && !par.fix_pressure)
+			  {
+				 local_average_pressure += xi.block(0)(dofs_f[i])
+										  *fe_f_v.shape_value(i,q)
+										  *fe_f_v.JxW(q);
+				 if(update_jacobian)
+					local_pressure_coefficient[i] += fe_f_v.shape_value(i,q)*fe_f_v.JxW(q)
+											 *scaling/area;
+			  }
+			 /*-----------------------------------------------------*/ 
            }
         }
 				 // Apply boundary conditions.
@@ -1278,6 +1373,17 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                                 dofs_f,
                                                 0,
                                                 0);
+	   
+	   if(par.all_DBC && !par.fix_pressure) 
+	   {
+		  distribute_constraint_on_pressure(residual.block(0),
+											local_average_pressure);
+		  
+		  if (update_jacobian) distribute_constraint_on_pressure(jacobian.block(0,0),
+																 local_pressure_coefficient,
+																 dofs_f,
+																 0);
+	   }
     }
 
 // ------------------------------------------------------------
@@ -2366,9 +2472,42 @@ void ImmersedFEM<dim>::apply_constraints(vector<double> &local_res,
            local_jacobian(i,i) = scaling;
           }
        }
+	   /*------------------------------------------------------------------------------*/
+	   if(par.all_DBC && !par.fix_pressure)
+	   {
+		  if(dofs[i] == constraining_dof)
+		  {
+			 local_res[i] = 0; 
+			 if( !local_jacobian.empty() )
+				local_jacobian.add_row(i, -1, i);
+		  }
+	   }
+	   /*------------------------------------------------------------------------------*/
+	   
     }
 }
 
+/*-----------------------------------------------*/
+template <int dim> 
+void ImmersedFEM<dim>::
+distribute_constraint_on_pressure(Vector<double> &residual,
+						       const double average_pressure)
+{
+   residual(constraining_dof) += average_pressure*scaling;
+}
+
+template <int dim> 
+void ImmersedFEM<dim>::
+distribute_constraint_on_pressure( SparseMatrix<double> &jacobian,
+							  const vector<double> &pressure_coefficient,
+							  const vector<unsigned int> &dofs,
+							  const unsigned int offset)
+{
+   for(unsigned int i=0, wi=offset; i<dofs.size();++i,++wi)
+	  jacobian.add(constraining_dof, dofs[i], pressure_coefficient[wi]);
+   
+}
+/*---------------------------------------------------*/
 
 
 // template <int dim>
