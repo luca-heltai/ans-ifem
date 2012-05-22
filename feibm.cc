@@ -1663,18 +1663,20 @@ if(par.mu != 0){
 				/*------------------------------------------------------------*/
 				for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )//Spread
 				{
-				   local_res[i] += 
-				   local_fe_f_v.shape_value(i, q)
-				   *fe_v_s.shape_value(j, qs)
-				   * local_M_gamma3_inv_A_gamma(j)
-				   * fe_v_s.JxW(qs);
+				   unsigned int comp_j =
+				   fe_s.system_to_component_index(j).first;
+				   if (comp_i == comp_j)
+					  local_res[i] += 
+					  par.Phi_B
+					  *local_fe_f_v.shape_value(i, q)
+					  *fe_v_s.shape_value(j, qs)
+					  * local_M_gamma3_inv_A_gamma(j)
+					  * fe_v_s.JxW(qs);
 				   
 				   if( update_jacobian ) 
 				   {
 					  unsigned int wj = j + fe_f.dofs_per_cell;
-					  unsigned int comp_j =
-					  fe_s.system_to_component_index(j).first;
-					  
+					 				  
 					  local_jacobian(i,wj) 
 					  += ( PFT_Dxi[qs][j][comp_i]
 						  *
