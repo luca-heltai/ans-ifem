@@ -449,8 +449,22 @@ class ImmersedFEM
    /*-----------------------------------------*/
 				    //The first dof pertaining to pressure field
    unsigned int constraining_dof;
-				  //Set to store the dofs corresponding to the pressure field 
+				  //A container to store the dofs corresponding to the pressure field 
    set<unsigned int> pressure_dofs;
+   
+
+/*------------------------------------------*/
+   /*------------------------------------------*/
+					 //	A vector to store the contribution of the elastic stress
+					 //of the solid 
+   Vector <double> A_gamma; 
+   Vector <double> M_gamma3_inv_A_gamma;
+   
+					 //The inverse of the mass matrix for the fluid domain
+   SparseDirectUMFPACK M_gamma3_inv; 
+					 //Mass matrix for the fluid domain
+   SparseMatrix<double> M_gamma3; 
+   
 /*------------------------------------------*/
 
 				  //Area of the control volume
@@ -481,11 +495,10 @@ class ImmersedFEM
 			   const Vector<double> &local_up,
 			   const vector<unsigned int> &dofs);
 //     
-    
-    void apply_current_bc(BlockVector<double> &vec,
-			  const double time);
-
    void compute_current_bc(const double time);
+   
+   void apply_current_bc(BlockVector<double> &vec,
+						 const double time);
 
 				     // Build the sparsity of the
 				     // system. 
@@ -537,6 +550,16 @@ void distribute_jacobian(SparseMatrix<double> &Jacobian,
 										  const vector<unsigned int> &dofs,
 										  const unsigned int offset);
 /*----------------------------------*/
+   /*------------------------------------*/
+   
+   void localize (Vector<double> &local_M_gamma3_inv_A_gamma,
+				  const Vector<double> &M_gamma3_inv_A_gamma,
+				  const vector<unsigned int> &dofs);
+   
+   void get_Agamma_values( const FEValues<dim,dim> &fe_v_s,
+						   const std::vector< unsigned int > &dofs,
+						   const Vector<double> &xi,
+						  Vector<double> &local_A_gamma);
 						
 void get_PFT_and_PFT_Dxi_values(
                 const FESystem<dim,dim> &fe_s,
@@ -546,12 +569,12 @@ void get_PFT_and_PFT_Dxi_values(
                 const bool update_jacobian, 
                 std::vector<Tensor<2,dim,double> > &PFT,
                 std::vector< std::vector<Tensor<2,dim,double> > > & PFT_Dxi);
-    
+/*----------------------------*/    
 				     /** Interface to OdeArgument */
     
-    virtual unsigned int n_dofs() const {return n_total_dofs;};
+    unsigned int n_dofs() const {return n_total_dofs;};
 
-    virtual void output_step(const double t,
+    void output_step(const double t,
 			     const Vector<double> &solution,
 			     const unsigned int step_number,
 			     const double h);
@@ -601,6 +624,32 @@ ImmersedFEM<dim>::~ImmersedFEM()
   global_info_file.close();
 }
 
+template <int dim>
+void
+ImmersedFEM<dim>::compute_current_bc(const double t)
+{
+   par.u_g.set_time(t);
+   VectorTools::interpolate_boundary_values(MappingQ1<dim>(),//SR: Added this to overcome an error in newer versions of dealii
+											dh_f,
+											par.boundary_map,
+											par.boundary_values,
+											par.component_mask);
+   
+   // Find the first pressure dof
+   if(par.fix_pressure == true)
+   {
+	  /*  vector<unsigned int> dofs(fe_f.dofs_per_cell);
+       dh_f.begin_active()->get_dof_indices(dofs);
+       unsigned int id=0;
+	   
+       while(true)
+	   {
+	   if(fe_f.system_to_component_index(id).first == dim) break;
+	   else ++id;
+	   }*/
+	  par.boundary_values[constraining_dof] = 0;
+   }
+}
 
 template <int dim>
 void
@@ -620,33 +669,6 @@ ImmersedFEM<dim>::apply_current_bc(BlockVector<double> &vec,
       constraints_f.set_inhomogeneity(it->first, it->second);
 }
 
-  
-
-template <int dim>
-void
-ImmersedFEM<dim>::compute_current_bc(const double t)
-{
-    par.u_g.set_time(t);
-    VectorTools::interpolate_boundary_values(dh_f,
-					   par.boundary_map,
-					   par.boundary_values,
-					   par.component_mask);
-
-				   // Find the first pressure dof
-    if(par.fix_pressure == true)
-     {
-     /*  vector<unsigned int> dofs(fe_f.dofs_per_cell);
-       dh_f.begin_active()->get_dof_indices(dofs);
-       unsigned int id=0;
-
-       while(true)
-        {
-          if(fe_f.system_to_component_index(id).first == dim) break;
-          else ++id;
-        }*/
-       par.boundary_values[constraining_dof] = 0;
-     }
-}
 
 
 				     // Functions dealing with the creation of the triangulation
@@ -770,10 +792,11 @@ create_triangulation_and_dofs ()
 				     // using zero boundary values for the velocity.
 				     // The specification of the actual boundary values is
 				     // done later by the "apply_current_bc" function. 
-    VectorTools::interpolate_boundary_values(dh_f,
-					     par.zero_boundary_map,
-					     constraints_f,
-					     par.component_mask);
+	 VectorTools::interpolate_boundary_values(MappingQ1<dim>(),//SR: Added this to overcome an error in newer versions of dealii
+											 dh_f,
+											 par.zero_boundary_map,
+											 constraints_f,
+											 par.component_mask);
   }
 				     // The function assemble_zero_mean_value_constraints
 				     // deals with the enforcement of the zero-average of the
@@ -878,6 +901,26 @@ create_triangulation_and_dofs ()
 
 				   // Boundary conditions at t = 0.
   apply_current_bc(previous_xi, 0);
+   /*-------------------------------------------------------------------------*/
+      
+   A_gamma.reinit(n_dofs_W);
+   
+   M_gamma3_inv_A_gamma.reinit(n_dofs_W);
+   
+				  //Creating the mass matrix for the solid domain and storing 
+				  //its inverse
+   ConstantFunction<dim> phi_b_func (par.Phi_B, dim);
+   
+   M_gamma3.reinit (sparsity.block(1,1));
+
+				  //Using the dealii in-built functionality to create the mass 
+				  //matrix
+   MatrixCreator::create_mass_matrix (dh_s, quad_s, M_gamma3, &phi_b_func); 
+   
+   M_gamma3_inv.initialize (M_gamma3);
+
+   /*-------------------------------------------------------------------------*/
+
 }
 
 
@@ -1437,7 +1480,16 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   std::vector<Tensor<2,dim,double> > PFT(nqps, Tensor<2,dim,double>());
   std::vector< std::vector<Tensor<2,dim,double> > > PFT_Dxi;
   if( update_jacobian )
-  PFT_Dxi.resize(nqps, std::vector< Tensor<2,dim,double> >(fe_s.dofs_per_cell));
+  {
+	 //PFT.resize(nqps, Tensor<2,dim,double>());
+	 PFT_Dxi.resize(nqps, std::vector< Tensor<2,dim,double> >(fe_s.dofs_per_cell));
+  }
+   /*-------------------------------------------------------------------------*/
+   A_gamma = 0.0;
+   Vector<double> local_A_gamma (fe_s.dofs_per_cell);
+  
+   Vector<double> local_M_gamma3_inv_A_gamma(fe_s.dofs_per_cell);
+   /* ------------------------------------------------------------------------*/
 
   // This information is used in finding what fluid cell contain the solid
   // domain at the current time.
@@ -1458,11 +1510,34 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
   typename DoFHandler<dim,dim>::active_cell_iterator
     cell_s = dh_s.begin_active(),
     endc_s = dh_s.end();
+   
+   /*-------------------------------------------------------------------------*/
+				  //First we cycle over the cells of the solid domain to evaluate
+				  //A_gamma and M_gamma3_inv_A_gamma
+   
+   //Begin the loop over cells to calculate A_gamma
+   if(par.mu != 0 )
+   {
+	  for (; cell_s != endc_s; ++cell_s)
+	  {
+		 fe_v_s.reinit(cell_s);
+		 cell_s->get_dof_indices(dofs_s);
+     
+		 get_Agamma_values(fe_v_s, dofs_s, xi.block(1),local_A_gamma);
+		 
+		 A_gamma.add (dofs_s, local_A_gamma);
+	  }//end cell_s-loop over solid cells 
+   
+	  M_gamma3_inv_A_gamma = A_gamma;//Use of 'M_gamma3_inv_A_gamma' is optional
+	  M_gamma3_inv.solve (M_gamma3_inv_A_gamma);
+   }
+   /*--------------------------------------------------------------------------*/
+   
 
   // -----------------------------------------------
   // Cycle over the cells of the solid domain: BEGIN
   // -----------------------------------------------
-  for(; cell_s != endc_s; ++cell_s)
+  for(cell_s = dh_s.begin_active(); cell_s != endc_s; ++cell_s)
     {
       fe_v_s_mapped.reinit(cell_s);
       fe_v_s.reinit(cell_s);
@@ -1473,7 +1548,11 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
       fe_v_s.get_function_values(xit.block(1), local_Wt);
       fe_v_s.get_function_values( xi.block(1), local_W);
       if(par.mu != 0 )
-      get_PFT_and_PFT_Dxi_values(fe_s, fe_v_s, dofs_s, xi.block(1), update_jacobian, PFT, PFT_Dxi);
+	  {
+		 localize (local_M_gamma3_inv_A_gamma, M_gamma3_inv_A_gamma, dofs_s);
+		// if( update_jacobian)
+		 get_PFT_and_PFT_Dxi_values(fe_s, fe_v_s, dofs_s, xi.block(1), update_jacobian, PFT, PFT_Dxi);
+	  }
 
 				 // Coupling between fluid and solid.
 				 // Identification of the fluid cells containing the
@@ -1483,7 +1562,7 @@ void ImmersedFEM<dim>::residual_and_or_Jacobian(BlockVector<double> &residual,
                                        fluid_qpoints,
                                        fluid_maps);
 
-      local_force.resize(nqps);
+      local_force.resize(nqps, Vector<double>(dim+1));
       par.force.vector_value_list(fe_v_s_mapped.get_quadrature_points(),
                                   local_force);
       
@@ -1553,32 +1632,66 @@ if(par.mu != 0){
              {
 				 // Quadrature point on the *mapped* solid (Bt)
                unsigned int &qs = fluid_maps[c][q];
+				
 				 // Contribution due to the elastic component
 				 // of the stress response function in the solid.
-				 // P F^{T} . grad_x v
-               local_res[i] += (PFT[qs][comp_i] * local_fe_f_v.shape_grad(i,q))
+				// P F^{T} . grad_x v
+              /* local_res[i] += (PFT[qs][comp_i] * local_fe_f_v.shape_grad(i,q))
                              * fe_v_s.JxW(qs);
                if( update_jacobian ) // Recall that the Hessian is symmetric.
-                {
+			   {
                   for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )
                     {
-                      unsigned int wj = j + fe_f.dofs_per_cell;
-                      unsigned int comp_j =
+					   unsigned int wj = j + fe_f.dofs_per_cell;
+					   unsigned int comp_j =
                                        fe_s.system_to_component_index(j).first;
-                      local_jacobian(i,wj) 
-                       += ( PFT_Dxi[qs][j][comp_i]
+					  
+						local_jacobian(i,wj) 
+						   += ( PFT_Dxi[qs][j][comp_i]
                            *
                             local_fe_f_v.shape_grad(i,q) )
-                        * fe_v_s.JxW(qs);
-                      if( !par.semi_implicit )
-                       local_jacobian(i,wj)
-                        += ( PFT[qs][comp_i]
-                           *
-                            local_fe_f_v.shape_hessian(i,q)[comp_j])
-                        * fe_v_s.shape_value(j,qs)
-                        * fe_v_s.JxW(qs);
-                    }
-                }
+						   * fe_v_s.JxW(qs);
+						  if( !par.semi_implicit )
+							 local_jacobian(i,wj)
+							  += ( PFT[qs][comp_i]
+								  *
+								  local_fe_f_v.shape_hessian(i,q)[comp_j])
+								 * fe_v_s.shape_value(j,qs)
+								 * fe_v_s.JxW(qs);
+					   }
+                }*/
+				/*------------------------------------------------------------*/
+				for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )//Spread
+				{
+				   local_res[i] += 
+				   fe_f_v.shape_value(i, q)
+				   *fe_v_s.shape_value(j, qs)
+				   * local_M_gamma3_inv_A_gamma(j)
+				   * fe_v_s.JxW(qs);
+				   
+				   if( update_jacobian ) 
+				   {
+					  unsigned int wj = j + fe_f.dofs_per_cell;
+					  unsigned int comp_j =
+					  fe_s.system_to_component_index(j).first;
+					  
+					  local_jacobian(i,wj) 
+					  += ( PFT_Dxi[qs][j][comp_i]
+						  *
+						  local_fe_f_v.shape_grad(i,q) )
+					  * fe_v_s.JxW(qs);
+					  
+					  if( !par.semi_implicit )
+						 local_jacobian(i,wj)
+						 += ( PFT[qs][comp_i]
+							 *
+							 local_fe_f_v.shape_hessian(i,q)[comp_j])
+						 * fe_v_s.shape_value(j,qs)
+						 * fe_v_s.JxW(qs);
+				   }
+				}//Spread
+			   
+				/*------------------------------------------------------------*/
              }
         }
 
@@ -2200,6 +2313,36 @@ void ImmersedFEM<dim>::output_step (const double t,
 // }
 
 template <int dim>
+void ImmersedFEM<dim>::get_Agamma_values( const FEValues<dim,dim> &fe_v_s,
+										  const std::vector< unsigned int > &dofs,
+										  const Vector<double> &xi, 
+										  Vector<double> &local_A_gamma)
+{
+   set_to_zero(local_A_gamma);
+
+   unsigned int qsize = fe_v_s.get_quadrature().size();
+   
+   std::vector< std::vector< Tensor<1,dim> > > H(qsize, std::vector< Tensor<1,dim> >(dim));
+   fe_v_s.get_function_gradients(xi, H);
+   
+   for( unsigned int qs = 0; qs < qsize; ++qs )
+   {
+	  for (unsigned int k = 0; k < dofs.size(); ++k)
+	  {
+		 unsigned int comp_k = fe_s.system_to_component_index(k).first;
+		 
+		 //Agamma = P:Grad_y, where P = mu*F= mu*(H+I)
+		 local_A_gamma (k) +=
+		 par.mu* (H[qs][comp_k]*fe_v_s.shape_grad(k, qs)
+				  + fe_v_s.shape_grad(k, qs)[comp_k])
+		 *fe_v_s.JxW(qs);
+	  }
+	  
+   }//end loop over quadrature points
+   
+}
+
+template <int dim>
 void ImmersedFEM<dim>::get_PFT_and_PFT_Dxi_values(
                 const FESystem<dim,dim> &fe_s,
                 const FEValues<dim,dim> &fe_v_s,
@@ -2217,7 +2360,7 @@ void ImmersedFEM<dim>::get_PFT_and_PFT_Dxi_values(
       for( unsigned int i = 0; i < dim; ++i )
         for( unsigned int j = 0; j < dim; ++j )
           {
-            PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]);
+			 PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]) + (i==j? 1.0: 0.0);//The last term has been added since the constitutive relation is now P=mu*F instead of mu*(F-F^{-T})
             PFT[qs][i][j] *= par.mu;
 
             if( update_jacobian )
@@ -2508,7 +2651,19 @@ distribute_constraint_on_pressure( SparseMatrix<double> &jacobian,
    
 }
 /*---------------------------------------------------*/
-
+/*---------------------------------------------------*/
+template <int dim> 
+void ImmersedFEM<dim>::
+localize (Vector<double> &local_M_gamma3_inv_A_gamma,
+		  const Vector<double> &M_gamma3_inv_A_gamma,
+		  const vector<unsigned int> &dofs)
+{
+   for (unsigned int i = 0; i < dofs.size(); ++i)
+   {
+	  local_M_gamma3_inv_A_gamma (i) = M_gamma3_inv_A_gamma(dofs[i]);
+   }
+}
+/*---------------------------------------------------*/
 
 // template <int dim>
 // int ImmersedFEM<dim>::jacobian(double,
