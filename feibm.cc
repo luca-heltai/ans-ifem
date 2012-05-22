@@ -1664,7 +1664,7 @@ if(par.mu != 0){
 				for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )//Spread
 				{
 				   local_res[i] += 
-				   fe_f_v.shape_value(i, q)
+				   local_fe_f_v.shape_value(i, q)
 				   *fe_v_s.shape_value(j, qs)
 				   * local_M_gamma3_inv_A_gamma(j)
 				   * fe_v_s.JxW(qs);
