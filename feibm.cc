@@ -193,6 +193,12 @@ class ProblemParameters :
 
  				     //! Name of the output file.
     string output_name;
+					 //
+   bool zero_residual_stress;
+					 //! The interval of timesteps between storage of output
+   int output_interval;
+					 // For the purpose of debugging
+   bool use_spread;
 };
 
  				     /** Class constructor: the name of the input file
@@ -244,6 +250,9 @@ ProblemParameters<dim>::ProblemParameters() :
   this->declare_entry("Output base name", "out/square", Patterns::Anything());
   this->declare_entry("Dirichlet BC indicator", "1", Patterns::Integer(0,254));
    this->declare_entry("All Dirichlet BC", "true", Patterns::Bool());
+   this->declare_entry("Zero residual stress", "false", Patterns::Bool());//SR
+   this->declare_entry("Interval (of time-steps) between output", "1", Patterns::Integer());//SR
+   this->declare_entry("Use spread operator","true", Patterns::Bool());//SR
 
  				     /** Specification of the parmeter file. */  
   this->read_input("immersed_fem.prm");
@@ -286,7 +295,10 @@ ProblemParameters<dim>::ProblemParameters() :
   output_name = this->get("Output base name");
 
   unsigned char id = this->get_integer("Dirichlet BC indicator");
-   all_DBC = this->get_bool("All Dirichlet BC");
+   all_DBC = this->get_bool("All Dirichlet BC");//SR
+   zero_residual_stress = this->get_bool("Zero residual stress");//SR
+   output_interval = this->get_integer("Interval (of time-steps) between output");//SR
+   use_spread =this->get_bool("Use spread operator");//SR
 
   component_mask[dim] = false;
   static ZeroFunction<dim> zero(dim+1);
@@ -294,6 +306,12 @@ ProblemParameters<dim>::ProblemParameters() :
   boundary_map[id] = &u_g;
   
   degree = this->get_integer("Velocity finite element degree");
+   
+   /*-----------------------------------------------*/
+   //Saving the parameters for the sake of convenience
+   std::ofstream paramfile((output_name+"_param.prm").c_str());
+   this->print_parameters(paramfile, this->Text);
+   /*-----------------------------------------------*/
 
 }
 
@@ -555,6 +573,9 @@ void distribute_jacobian(SparseMatrix<double> &Jacobian,
    void localize (Vector<double> &local_M_gamma3_inv_A_gamma,
 				  const Vector<double> &M_gamma3_inv_A_gamma,
 				  const vector<unsigned int> &dofs);
+   
+   void get_Piola_stress( const std::vector< Tensor<1,dim> > &H,
+						 Tensor<2, dim, double> &P);
    
    void get_Agamma_values( const FEValues<dim,dim> &fe_v_s,
 						   const std::vector< unsigned int > &dofs,
@@ -1636,21 +1657,23 @@ if(par.mu != 0){
 				 // Contribution due to the elastic component
 				 // of the stress response function in the solid.
 				// P F^{T} . grad_x v
-              /* local_res[i] += (PFT[qs][comp_i] * local_fe_f_v.shape_grad(i,q))
+				if (!par.use_spread)
+				{//std::cout<<"Not spreading!"<<std::endl;
+				   local_res[i] += (PFT[qs][comp_i] * local_fe_f_v.shape_grad(i,q))
                              * fe_v_s.JxW(qs);
-               if( update_jacobian ) // Recall that the Hessian is symmetric.
-			   {
-                  for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )
-                    {
-					   unsigned int wj = j + fe_f.dofs_per_cell;
-					   unsigned int comp_j =
+				   if( update_jacobian ) // Recall that the Hessian is symmetric.
+				   {
+					  for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )
+					  {
+						 unsigned int wj = j + fe_f.dofs_per_cell;
+						 unsigned int comp_j =
                                        fe_s.system_to_component_index(j).first;
 					  
-						local_jacobian(i,wj) 
-						   += ( PFT_Dxi[qs][j][comp_i]
-                           *
-                            local_fe_f_v.shape_grad(i,q) )
-						   * fe_v_s.JxW(qs);
+						 local_jacobian(i,wj) 
+							  += ( PFT_Dxi[qs][j][comp_i]
+								  *
+								  local_fe_f_v.shape_grad(i,q) )
+								 * fe_v_s.JxW(qs);
 						  if( !par.semi_implicit )
 							 local_jacobian(i,wj)
 							  += ( PFT[qs][comp_i]
@@ -1659,43 +1682,45 @@ if(par.mu != 0){
 								 * fe_v_s.shape_value(j,qs)
 								 * fe_v_s.JxW(qs);
 					   }
-                }*/
-				/*------------------------------------------------------------*/
-				for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )//Spread
-				{
-				   unsigned int comp_j =
-				   fe_s.system_to_component_index(j).first;
-				   if (comp_i == comp_j)
-					  local_res[i] += 
-					  par.Phi_B
-					  *local_fe_f_v.shape_value(i, q)
-					  *fe_v_s.shape_value(j, qs)
-					  * local_M_gamma3_inv_A_gamma(j)
-					  * fe_v_s.JxW(qs);
-				   
-				   if( update_jacobian ) 
-				   {
-					  unsigned int wj = j + fe_f.dofs_per_cell;
-					 				  
-					  local_jacobian(i,wj) 
-					  += ( PFT_Dxi[qs][j][comp_i]
-						  *
-						  local_fe_f_v.shape_grad(i,q) )
-					  * fe_v_s.JxW(qs);
-					  
-					  if( !par.semi_implicit )
-						 local_jacobian(i,wj)
-						 += ( PFT[qs][comp_i]
-							 *
-							 local_fe_f_v.shape_hessian(i,q)[comp_j])
-						 * fe_v_s.shape_value(j,qs)
-						 * fe_v_s.JxW(qs);
 				   }
-				}//Spread
-			   
-				/*------------------------------------------------------------*/
-             }
-        }
+				}
+				else
+				{//std::cout<<"SPREADING!"<<std::endl;
+				   /*------------------------------------------------------------*/
+				   for( unsigned int j = 0; j < fe_s.dofs_per_cell; ++j )//Spread
+				   {
+					  unsigned int comp_j =
+					  fe_s.system_to_component_index(j).first;
+					  if (comp_i == comp_j)
+						 local_res[i] += 
+						 par.Phi_B
+						 *local_fe_f_v.shape_value(i, q)
+						 *fe_v_s.shape_value(j, qs)
+						 * local_M_gamma3_inv_A_gamma(j)
+						 * fe_v_s.JxW(qs);
+					  
+					  if( update_jacobian ) 
+					  {
+						 unsigned int wj = j + fe_f.dofs_per_cell;
+						 
+						 local_jacobian(i,wj) 
+						 += ( PFT_Dxi[qs][j][comp_i]
+							 *
+							 local_fe_f_v.shape_grad(i,q) )
+						 * fe_v_s.JxW(qs);
+						 if( !par.semi_implicit )
+							local_jacobian(i,wj)
+							+= ( PFT[qs][comp_i]
+								*
+								local_fe_f_v.shape_hessian(i,q)[comp_j])
+							* fe_v_s.shape_value(j,qs)
+							* fe_v_s.JxW(qs);
+					  }
+				   }
+				   /*------------------------------------------------------------*/
+				   }//Spread
+			 }
+		}
 
 // 
 // ****************************************************
@@ -2129,6 +2154,8 @@ void ImmersedFEM<dim>::output_step (const double t,
   utility_xi = solution;
 
   global_info_file << t << " ";
+   if ((step ==1) ||(step % par.output_interval==0))
+   {
   {
     std::vector<std::string> joint_solution_names (dim, "v");
     joint_solution_names.push_back ("p");
@@ -2169,6 +2196,7 @@ void ImmersedFEM<dim>::output_step (const double t,
 			   ".vtu").c_str());
     data_out.write_vtu (output);
   }
+   }
   {
 				     // Assemble in and out flux
     typename DoFHandler<dim,dim>::active_cell_iterator
@@ -2314,6 +2342,24 @@ void ImmersedFEM<dim>::output_step (const double t,
 //   return P;
 // }
 
+			//This function is required only if we want to use the zero-residual 
+			//stress relation for the constitutive model pertaining to the solid 
+template <int dim>
+void ImmersedFEM<dim>::get_Piola_stress ( const std::vector< Tensor<1,dim> > &H,
+										 Tensor<2, dim, double> &P)
+{   
+   Assert(H.size() == dim,ExcDimensionMismatch(H.size(), dim));
+   
+   Tensor<2, dim, double> F;
+   for(unsigned int i=0; i <dim; ++i)
+   {
+	  F[i] = H[i];
+	  F[i][i] += 1.0;
+   }
+   
+   P = par.mu * ( F - transpose (invert(F)));
+}
+
 template <int dim>
 void ImmersedFEM<dim>::get_Agamma_values( const FEValues<dim,dim> &fe_v_s,
 										  const std::vector< unsigned int > &dofs,
@@ -2327,17 +2373,36 @@ void ImmersedFEM<dim>::get_Agamma_values( const FEValues<dim,dim> &fe_v_s,
    std::vector< std::vector< Tensor<1,dim> > > H(qsize, std::vector< Tensor<1,dim> >(dim));
    fe_v_s.get_function_gradients(xi, H);
    
+   Tensor<2, dim, double> P;
+   
    for( unsigned int qs = 0; qs < qsize; ++qs )
-   {
-	  for (unsigned int k = 0; k < dofs.size(); ++k)
+   {	 
+	  if (par.zero_residual_stress)
 	  {
-		 unsigned int comp_k = fe_s.system_to_component_index(k).first;
+		 get_Piola_stress (H[qs], P);
 		 
-		 //Agamma = P:Grad_y, where P = mu*F= mu*(H+I)
-		 local_A_gamma (k) +=
-		 par.mu* (H[qs][comp_k]*fe_v_s.shape_grad(k, qs)
-				  + fe_v_s.shape_grad(k, qs)[comp_k])
-		 *fe_v_s.JxW(qs);
+		 for (unsigned int k = 0; k < dofs.size(); ++k)
+		 {
+			unsigned int comp_k = fe_s.system_to_component_index(k).first;
+			
+			//Agamma = P:Grad_y, where P = mu*(F-F^{-T})
+			local_A_gamma (k) +=
+			P[comp_k]*fe_v_s.shape_grad(k, qs)
+			*fe_v_s.JxW(qs);
+		 }
+	  }
+	  else
+	  {
+		 for (unsigned int k = 0; k < dofs.size(); ++k)
+		 {
+			unsigned int comp_k = fe_s.system_to_component_index(k).first;
+			
+			//Agamma = P:Grad_y, where P = mu*F= mu*(H+I)
+			local_A_gamma (k) +=
+			par.mu* (H[qs][comp_k]*fe_v_s.shape_grad(k, qs)
+					 + fe_v_s.shape_grad(k, qs)[comp_k])
+			*fe_v_s.JxW(qs);
+		 }
 	  }
 	  
    }//end loop over quadrature points
@@ -2362,7 +2427,8 @@ void ImmersedFEM<dim>::get_PFT_and_PFT_Dxi_values(
       for( unsigned int i = 0; i < dim; ++i )
         for( unsigned int j = 0; j < dim; ++j )
           {
-			 PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]) + (i==j? 1.0: 0.0);//The last term has been added since the constitutive relation is now P=mu*F instead of mu*(F-F^{-T})
+			 PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]) 
+							  + ((!par.zero_residual_stress && (i==j))? 1.0: 0.0);//The last term has been added since the constitutive relation is now P=mu*F instead of mu*(F-F^{-T})
             PFT[qs][i][j] *= par.mu;
 
             if( update_jacobian )
