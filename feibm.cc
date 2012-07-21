@@ -4,7 +4,7 @@
 // (2) Center for Neural Engineering, The Pennsylvania State University
 //     E-Mail: sur164@psu.edu
 // (3) Center for Neural Engineering, The Pennsylvania State University
-//     E-Mail: sur164@psu.edu
+//     E-Mail: costanzo@engr.psu.edu
 // Date: July 5, 2012
 // 
 // This code was developed starting from the example
@@ -191,14 +191,21 @@ class ProblemParameters :
 				 /** Name of the output file. */
     string output_name;
 
-				 /** Variable to identify cases with zero residual stress. */
-   bool zero_residual_stress;
-
 				 /** The interval of timesteps between storage of output. */
    int output_interval;
 
-				 /** For the purpose of debugging. */
+				 /** Flag to identify whether to use the spread operator or not. */
    bool use_spread;
+   
+                 /** List of available consitutive models for the elastic stress of the immersed solid. */ 
+   enum MaterialModel {INH_0 = 1, INH_1, CircumferentialFiberModel};
+   
+                 /** Variable to identify the constitutive model for the immersed solid. */
+   unsigned int material_model;
+  
+                 /** String to store the name of the finite element that will be used
+				  for the pressure field. */
+  std::string fe_p_name;
 };
 
 				 /** Class constructor: the name of the input file is "immersed_fem.prm".
@@ -243,15 +250,22 @@ ProblemParameters<dim>::ProblemParameters() :
   this->declare_entry("Phi_B", "1", Patterns::Double());
   this->declare_entry("Semi-implicit scheme", "true", Patterns::Bool());
   this->declare_entry("Fix one dof of p", "false", Patterns::Bool());
-  this->declare_entry("Solid mesh", "mesh/solid.inp", Patterns::Anything());
-  this->declare_entry("Fluid mesh", "mesh/fluid.inp", Patterns::Anything());
+  this->declare_entry("Solid mesh", "mesh/solid_square.inp", Patterns::Anything());
+  this->declare_entry("Fluid mesh", "mesh/fluid_square.inp", Patterns::Anything());
   this->declare_entry("Output base name", "out/square", Patterns::Anything());
   this->declare_entry("Dirichlet BC indicator", "1", Patterns::Integer(0,254));
   this->declare_entry("All Dirichlet BC", "true", Patterns::Bool());
-  this->declare_entry("Zero residual stress", "false", Patterns::Bool());//SR
-  this->declare_entry("Interval (of time-steps) between output", "1", Patterns::Integer());//SR
-  this->declare_entry("Use spread operator","true", Patterns::Bool());//SR
-
+  this->declare_entry("Interval (of time-steps) between output", "1", Patterns::Integer());
+  this->declare_entry("Use spread operator","true", Patterns::Bool());
+  this->declare_entry("Solid constitutive model","INH_0", Patterns::Selection("INH_0|INH_1|CircumferentialFiberModel"),"Constitutive models available are: INH_0 stands for Incompressible Neo-Hookean with zero residual stress; INH_1 stands for Incompressible Neo-Hookean with residual stress; CircumferentialFiberModel is suitable for annular solid comprising inextensible circumferntial fibers");
+  this->declare_entry("Finite element for pressure","FE_DGP", Patterns::Selection("FE_DGP|FE_Q"),"Select between FE_Q (Lagrange finite element space of continuous, piecewise polynomials) or FE_DGP(Discontinuous finite elements based on Legendre polynomials) to approximate the pressure field");
+  this->enter_subsection("Equilibrium Solution of Ring with Circumferential Fibers");
+  this->declare_entry("Inner radius of the ring", "0.25", Patterns::Double());
+  this->declare_entry("Width of the ring", "0.0625", Patterns::Double());
+  this->declare_entry("Any edge length of the (square) control volume", "1.", Patterns::Double());
+  this->declare_entry("x-coordinate of the center of the ring", "0.5", Patterns::Double());
+  this->declare_entry("y-coordinate of the center of the ring", "0.5", Patterns::Double());
+  this->leave_subsection();
 				 // Specification of the parmeter file.
   this->read_input("immersed_fem.prm");
  
@@ -293,10 +307,19 @@ ProblemParameters<dim>::ProblemParameters() :
   output_name = this->get("Output base name");
 
   unsigned char id = this->get_integer("Dirichlet BC indicator");
-  all_DBC = this->get_bool("All Dirichlet BC");//SR
-  zero_residual_stress = this->get_bool("Zero residual stress");//SR
-  output_interval = this->get_integer("Interval (of time-steps) between output");//SR
-  use_spread =this->get_bool("Use spread operator");//SR
+  all_DBC = this->get_bool("All Dirichlet BC");
+  output_interval = this->get_integer("Interval (of time-steps) between output");
+  use_spread =this->get_bool("Use spread operator");
+   
+  if(this->get("Solid constitutive model")== std::string("INH_0"))
+	 material_model = INH_0;
+  else if (this->get("Solid constitutive model")== std::string("INH_1")) 
+	 material_model = INH_1;
+  else if (this->get("Solid constitutive model")== std::string("CircumferentialFiberModel"))
+	 material_model = CircumferentialFiberModel;
+  else
+	 std::cout << " No matching constitutive model found! Using INH with zero residual stress." 
+	  << std::endl;
 
   component_mask[dim] = false;
   static ZeroFunction<dim> zero(dim+1);
@@ -304,14 +327,102 @@ ProblemParameters<dim>::ProblemParameters() :
   boundary_map[id] = &u_g;
   
   degree = this->get_integer("Velocity finite element degree");
+  
+  fe_p_name = this->get("Finite element for pressure");
+  fe_p_name +="<dim>(" + Utilities::int_to_string(degree-1) + ")";
    
    /*-----------------------------------------------*/ 
-   /* To elimintae
+   // To elimintae
    //Saving the parameters for the sake of convenience
    std::ofstream paramfile((output_name+"_param.prm").c_str());
    this->print_parameters(paramfile, this->Text);
    /*-----------------------------------------------*/
+}
 
+				/** A class for evaluating the equilibrium solution corresponding to the "hello world" problem. */ 
+template<int dim>
+class ExactSolutionRingWithFibers :
+  public Function<dim>
+{
+  public:
+				 /** No default constructor is defined. Simulation objects must be
+				  initialized by assigning the simulation parameters, which are 
+				  elements of objects of type <b>ProblemParameters</b>. */
+    ExactSolutionRingWithFibers (ProblemParameters<dim> &par);
+				/**  */
+    void vector_value (const Point <dim> &p,
+					   Vector <double> &values) const;
+  
+  void vector_value_list(const std::vector< Point<dim> > &points,
+						 std::vector <Vector <double> > &values ) const;
+  private:
+    ProblemParameters<dim> &par;
+
+				/** Inner radius of the ring. */
+    double R;
+				/** Outer radius of the ring. */
+    double w;
+				/** Edge length of the square control volume.*/
+    double l;
+				/** x-coordinate of the center of the ring.*/
+    double x_c;
+				/** y-coordinate of the center of the ring.*/
+    double y_c;
+};
+
+				 /** Class constructor */
+template<int dim>
+ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (ProblemParameters<dim> &prm)
+		:
+		Function<dim>(dim+1),
+		par(prm)
+{
+  par.enter_subsection("Equilibrium Solution of Ring with Circumferential Fibers");
+  R = par.get_double("Inner radius of the ring");
+  w = par.get_double("Width of the ring");
+  l = par.get_double("Any edge length of the (square) control volume");
+  x_c = par.get_double("x-coordinate of the center of the ring");
+  y_c = par.get_double("y-coordinate of the center of the ring");
+  par.leave_subsection();
+}
+
+
+template<int dim>
+void 
+ExactSolutionRingWithFibers<dim>::vector_value
+								 (
+								 const Point <dim> &p,
+								 Vector <double> &values
+								 ) const
+{
+  double r = p.distance (Point<dim> (x_c, y_c));
+  
+  values = 0.0;
+  
+  double p0 = -numbers::PI*par.mu/(2*l*l)*w*(2*R+w);
+  
+  if (r >= (R+w))
+	values(dim) = p0;
+  else if (r >= R)
+	values(dim) = p0 + par.mu*log((R + w)/r);
+  else 
+	values(dim) = p0 + par.mu*log(1.0 + w/R);
+}
+
+
+template<int dim>
+void
+ExactSolutionRingWithFibers<dim>::vector_value_list
+								 (
+								 const std::vector< Point<dim> > &points,
+								 std::vector <Vector <double> > &values 
+								 ) const
+{
+  Assert (points.size() == values.size(), 
+		  ExcDimensionMismatch(points.size(), values.size()));
+  
+  for (unsigned int i = 0; i < values.size(); ++i)
+	vector_value (points[i], values[i]);
 }
 
 				 /** It defines simulations objects. The only method in the public
@@ -360,7 +471,10 @@ class ImmersedFEM
 				 The meaning of the parameter <i>dim</i> is as for the
 				 <b>Triangulation<dim> tria_f</b> element of the class. */
     FESystem<dim>			fe_f;
-
+ 
+				  /** A variable to check whether the pressure field is approximated using the FE_DGP elements. *///-----------------------------
+	bool dgp_for_p;
+  
 				 /** This is FESystems for the immersed domain. It consists of a single
 				 field: displacement (a vector field of dimension <i>dim</i>). The meaning
 				 of the parameter <i>dim</i> is as for the <b>Triangulation<dim>
@@ -385,7 +499,9 @@ class ImmersedFEM
     QGauss<dim>				quad_f;
 
 				 /** The quadrature object for the immersed domain. */
-    QGauss<dim>				quad_s;
+    QTrapez<1> qtrapez;
+    QIterated<dim> quad_s;
+   // QGauss<dim>				quad_s;//------------------------------------
 
 				 /** Constraints matrix for the control volume. */
     ConstraintMatrix		constraints_f;
@@ -470,7 +586,7 @@ class ImmersedFEM
 				 /** Area of the control volume. */
     double area;
 
-				 /** Not sure what this does. */
+				 /** Filestream that is used to output a file containing information about the fluid flux, area and the centroid of the immersed domain over time. */
     std::ofstream global_info_file;
 
 				// ---------------------
@@ -523,21 +639,23 @@ class ImmersedFEM
 				 const Vector<double> &M_gamma3_inv_A_gamma,
 				 const vector<unsigned int> &dofs);
    
-    void get_Piola_stress (const std::vector< Tensor<1,dim> > &H,
-				 Tensor<2, dim, double> &P);
+    //------------------------------void get_Piola_stress (const std::vector< Tensor<1,dim> > &H,
+	//			 Tensor<2, dim, double> &P);
    
     void get_Agamma_values (const FEValues<dim,dim> &fe_v_s,
 				 const std::vector< unsigned int > &dofs,
 				 const Vector<double> &xi,
 				 Vector<double> &local_A_gamma);
 						
-    void get_PFT_and_PFT_Dxi_values (const FESystem<dim,dim> &fe_s,
-				 const FEValues<dim,dim> &fe_v_s,
+    void get_Pe_F_and_DPe_dxi_values (const FEValues<dim,dim> &fe_v_s,
 				 const std::vector< unsigned int > &dofs,
 				 const Vector<double> &xi,
 				 const bool update_jacobian,
-				 std::vector<Tensor<2,dim,double> > &PFT,
-				 std::vector< std::vector<Tensor<2,dim,double> > > & PFT_Dxi);
+				 std::vector<Tensor<2,dim,double> > &Pe,
+			     std::vector<Tensor<2,dim,double> > &F,
+				 std::vector< std::vector<Tensor<2,dim,double> > > & DPe_dxi);
+  
+	void calculate_error () const;
 
     unsigned int n_dofs() const {return n_total_dofs;};
 
@@ -568,12 +686,14 @@ template <int dim>
 ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 		:
 		par (par),
-		fe_f (FE_Q<dim>(par.degree), dim, FE_Q<dim>(par.degree-1), 1),
+//fe_f (FE_Q<dim>(par.degree), dim, FE_DGP<dim>(par.degree-1), 1),dgp_for_p(true),
+		fe_f (FE_Q<dim>(par.degree), dim,*FETools::get_fe_from_name<dim>(par.fe_p_name),1),
 		fe_s (FE_Q<dim, dim>(par.degree), dim),
 		dh_f (tria_f),
 		dh_s (tria_s),
 		quad_f (par.degree+2),
-		quad_s (par.degree+2)
+		quad_s (qtrapez, 4*(par.degree+8))
+		//quad_s (par.degree+2)
 {
   if(par.degree <= 1)
     std::cout << " WARNING: The chosen pair of finite element spaces is not stable."
@@ -581,6 +701,10 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 	      << " The obtained results will be nonsense"
 	      << std::endl;
   
+  if( Utilities::match_at_string_start(par.fe_p_name, string("FE_DGP")))
+	dgp_for_p = true;
+  else dgp_for_p = false;
+
   create_triangulation_and_dofs ();
 
   global_info_file.open((par.output_name+"_global.gpl").c_str());
@@ -658,7 +782,9 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 				 // A grid in ucd format is expected. 
     grid_in_f.read_ucd (file);
   }
-  
+				 //For the hello-world problem ONLY-----------
+   static const HyperShellBoundary<dim> shell_boundary;
+
   GridIn<dim, dim> grid_in_s;
   grid_in_s.attach_triangulation (tria_s);
 
@@ -669,8 +795,12 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 				 // A grid in ucd format is expected. 
     grid_in_s.read_ucd (file);
   }
+				 //-----------------FOR HELLO WORLD PROBLEM ONLY
+  if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel)
+	tria_s.set_boundary(0, shell_boundary);
 
-  std::cout << "Number of fluid refines = " << par.ref_f << std::endl;
+  std::cout << "Number of fluid refines = " << par.ref_f
+	    << std::endl;
   tria_f.refine_global (par.ref_f);
   std::cout << "Number of active cells: " << tria_f.n_active_cells () << std::endl;
   std::cout << "Number of solid refines = " << par.ref_s << std::endl;
@@ -935,7 +1065,11 @@ ImmersedFEM<dim>::get_area_and_first_pressure_dof ()
     for(unsigned int i=0; i < fe_f.dofs_per_cell; ++i)
     {
       unsigned int comp_i = fe_f.system_to_component_index(i).first;
-      if(comp_i == dim)  pressure_dofs.insert(dofs_f[i]);
+      if(comp_i == dim)  
+	  {
+		pressure_dofs.insert(dofs_f[i]);
+		if (dgp_for_p) break;
+	  }
     }
 
     for(unsigned int q=0; q<quad_f.size(); ++q) area += fe_v.JxW(q);
@@ -1222,17 +1356,20 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
                                      * fe_f_v.JxW(q);
             }
 
-			if (par.all_DBC && !par.fix_pressure)
+		  if (par.all_DBC && !par.fix_pressure)
+		  {
+			if(!dgp_for_p || (dgp_for_p && (fe_f.system_to_component_index(i).second==0)))
 			{
 			  local_average_pressure += xi.block(0)(dofs_f[i])
-									  * fe_f_v.shape_value(i,q)
-									  * fe_f_v.JxW(q);
+									  *fe_f_v.shape_value(i,q)
+									  *fe_f_v.JxW(q);				 
 			  if(update_jacobian)
-			    local_pressure_coefficient[i] += fe_f_v.shape_value(i,q)
-			                                   * fe_f_v.JxW(q)
-											   * scaling
-											   / area;
+			  {
+				local_pressure_coefficient[i] += fe_f_v.shape_value(i,q)
+											   *fe_f_v.JxW(q);
+			  }
 			}
+		  }
         }
     }
 				 // Apply boundary conditions.
@@ -1305,20 +1442,23 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
   				 // Local storage of the
   				 //  * velocity in the solid: Wt;
   				 //  * displacement in the solid: W;
-  				 //  * P F^{T}, which is the work conjugate of the velocity
+  				 //  * Pe F^{T}, which is the work conjugate of the velocity ------------------
   				 //    gradient when measured over the reference configuration:
-  				 //    PFT
-  				 //  * Frechet derivative of PFT with respect to degrees of
-  				 //    freedom in a solid cell: PFT_Dxi.
+  				 //    PeFT
+  				 //  * Frechet derivative of PeFT with respect to degrees of
+  				 //    freedom in a solid cell: DPeFT_dxi.
   std::vector<Vector<double> > local_Wt(nqps, Vector<double>(dim));
   std::vector<Vector<double> > local_W (nqps, Vector<double>(dim));
-  std::vector<Tensor<2,dim,double> > PFT(nqps, Tensor<2,dim,double>());
-  std::vector< std::vector<Tensor<2,dim,double> > > PFT_Dxi;
+  std::vector<Tensor<2,dim,double> > Pe(nqps, Tensor<2,dim,double>());
+  std::vector<Tensor<2,dim,double> > F(nqps, Tensor<2,dim,double>());
+  Tensor<2,dim,double> PeFT;
+  std::vector< std::vector<Tensor<2,dim,double> > > DPeFT_dxi;
   if(update_jacobian)
   {
-    PFT_Dxi.resize(nqps, std::vector< Tensor<2,dim,double> >
-  				 (fe_s.dofs_per_cell));
+    DPeFT_dxi.resize(nqps, std::vector< Tensor<2,dim,double> >
+  				 (fe_s.dofs_per_cell, Tensor<2,dim,double>()));
   }
+
   				 // Initialization of the elastic operator of the immersed
   				 // domain.
    A_gamma = 0.0;
@@ -1378,14 +1518,15 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
     fe_v_s.get_function_values (xit.block(1), local_Wt);
     fe_v_s.get_function_values ( xi.block(1), local_W);
     localize (local_M_gamma3_inv_A_gamma, M_gamma3_inv_A_gamma, dofs_s);
-    get_PFT_and_PFT_Dxi_values (fe_s,
-  				 fe_v_s,
-  				 dofs_s,
-  				 xi.block(1),
-  				 update_jacobian,
-  				 PFT,
-  				 PFT_Dxi);
-
+	get_Pe_F_and_DPe_dxi_values (fe_v_s,
+								 dofs_s,
+								 xi.block(1),
+								 update_jacobian,
+								 Pe,
+								 F,
+								 DPeFT_dxi);
+	
+    
 				 // Coupling between fluid and solid.
 				 // Identification of the fluid cells containing the
 				 // quadrature points on the current solid cell.
@@ -1466,9 +1607,11 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 				 // Contribution due to the elastic component
 				 // of the stress response function in the solid.
 				 // P F^{T} . grad_x v
+			if((!par.semi_implicit) || (!par.use_spread))
+			  contract (PeFT, Pe[qs], 2, F[qs], 2); 
             if (!par.use_spread)
             {
-              local_res[i] += (PFT[qs][comp_i]
+              local_res[i] += (PeFT[comp_i]
 				               * local_fe_f_v.shape_grad(i,q))
                                * fe_v_s.JxW(qs);
               if(update_jacobian) // Recall that the Hessian is symmetric.
@@ -1478,11 +1621,11 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
                   unsigned int wj = j + fe_f.dofs_per_cell;
                   unsigned int comp_j = fe_s.system_to_component_index(j).first;
 					  
-                  local_jacobian(i,wj) += ( PFT_Dxi[qs][j][comp_i]
+                  local_jacobian(i,wj) += ( DPeFT_dxi[qs][j][comp_i]
 								            * local_fe_f_v.shape_grad(i,q) )
 								        * fe_v_s.JxW(qs);
                   if( !par.semi_implicit )
-                    local_jacobian(i,wj) += ( PFT[qs][comp_i]
+                    local_jacobian(i,wj) += ( PeFT[comp_i]
 								              * local_fe_f_v.shape_hessian(i,q)[comp_j])
 								          * fe_v_s.shape_value(j,qs)
 								          * fe_v_s.JxW(qs);
@@ -1505,11 +1648,11 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
                 {
                   unsigned int wj = j + fe_f.dofs_per_cell;
 						 
-                  local_jacobian(i,wj) += ( PFT_Dxi[qs][j][comp_i]
+                  local_jacobian(i,wj) += ( DPeFT_dxi[qs][j][comp_i]
 							               * local_fe_f_v.shape_grad(i,q) )
 						                * fe_v_s.JxW(qs);
                   if( !par.semi_implicit )
-                    local_jacobian(i,wj) += ( PFT[qs][comp_i]
+                    local_jacobian(i,wj) += ( PeFT[comp_i]
 								             *
 								             local_fe_f_v.shape_hessian(i,q)[comp_j])
 							              * fe_v_s.shape_value(j,qs)
@@ -1833,6 +1976,9 @@ ImmersedFEM<dim>::run ()
       if(par.update_jacobian_at_step_beginning) update_Jacobian = true;
        
   } // End of the cycle over time.
+  
+  if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel) 
+	calculate_error();
 
 } // End of "run()"
 
@@ -1969,7 +2115,7 @@ ImmersedFEM<dim>::output_step
 			     /** Evaluation of the part of the 1st Piola-Kirchhoff 
 			     stress tensor corresponding to a given value of the
 			     displacement gradient. */
-template <int dim>
+/*template <int dim>
 void
 ImmersedFEM<dim>::get_Piola_stress
 				 (
@@ -1988,7 +2134,7 @@ ImmersedFEM<dim>::get_Piola_stress
    
    P = par.mu * ( F - transpose( invert(F) ) );
 }
-
+*/
 
                  /** Determination of a vector of local dofs representing
                  the field A_gamma. */
@@ -2002,47 +2148,37 @@ ImmersedFEM<dim>::get_Agamma_values
                  Vector<double> &local_A_gamma
                  )
 {
-   set_to_zero(local_A_gamma);
+  set_to_zero(local_A_gamma);
 
-   unsigned int qsize = fe_v_s.get_quadrature().size();
+  unsigned int qsize = fe_v_s.get_quadrature().size();
    
-   std::vector< std::vector< Tensor<1,dim> > > H(qsize, std::vector< Tensor<1,dim> >(dim));
-   fe_v_s.get_function_gradients(xi, H);
+  std::vector< std::vector< Tensor<1,dim> > > H(qsize, std::vector< Tensor<1,dim> >(dim));
+  fe_v_s.get_function_gradients(xi, H);
    
-   Tensor<2, dim, double> P;
+  std::vector<Tensor<2,dim,double> > P (qsize, Tensor<2,dim,double>());
+  std::vector<Tensor<2,dim,double> > tmp1;
+  std::vector< std::vector<Tensor<2,dim,double> > > tmp2;
+   
+  get_Pe_F_and_DPe_dxi_values (fe_v_s,
+								dofs,
+								xi,
+								false,
+								P,
+								tmp1,
+								tmp2);
    
    for( unsigned int qs = 0; qs < qsize; ++qs )
    {	 
-	  if (par.zero_residual_stress)
+	  for (unsigned int k = 0; k < dofs.size(); ++k)
 	  {
-		 get_Piola_stress (H[qs], P);
-		 
-		 for (unsigned int k = 0; k < dofs.size(); ++k)
-		 {
-			unsigned int comp_k = fe_s.system_to_component_index(k).first;
+		 unsigned int comp_k = fe_s.system_to_component_index(k).first;
 			
-			//Agamma = P:Grad_y, where P = mu*(F-F^{-T})
-			local_A_gamma (k) +=
-			P[comp_k]*fe_v_s.shape_grad(k, qs)
-			*fe_v_s.JxW(qs);
+		 //Agamma = P:Grad_y
+		 local_A_gamma (k) +=
+		 P[qs][comp_k]*fe_v_s.shape_grad(k, qs)
+		 *fe_v_s.JxW(qs);
 		 }
-	  }
-	  else
-	  {
-		 for (unsigned int k = 0; k < dofs.size(); ++k)
-		 {
-			unsigned int comp_k = fe_s.system_to_component_index(k).first;
-			
-			// Agamma = P:Grad_y, where P = mu*F= mu*(H+I)
-			local_A_gamma (k) +=
-			par.mu* (H[qs][comp_k]*fe_v_s.shape_grad(k, qs)
-					 + fe_v_s.shape_grad(k, qs)[comp_k])
-			*fe_v_s.JxW(qs);
-		 }
-	  }
-	  
    }
-   
 }
 
                  /** Value of the product of the 1st Piola-Kirchhoff stress
@@ -2051,49 +2187,118 @@ ImmersedFEM<dim>::get_Agamma_values
                  immersed domain. */
 template <int dim>
 void
-ImmersedFEM<dim>::get_PFT_and_PFT_Dxi_values
-				 (
-				 const FESystem<dim,dim> &fe_s,
-                 const FEValues<dim,dim> &fe_v_s,
-                 const std::vector< unsigned int > &dofs,
-                 const Vector<double> &xi, 
-                 const bool update_jacobian, 
-                 std::vector<Tensor<2,dim,double> > &PFT,
-                 std::vector< std::vector<Tensor<2,dim,double> > > & PFT_Dxi
-                 )
+ImmersedFEM<dim>::get_Pe_F_and_DPe_dxi_values (const FEValues<dim,dim> &fe_v_s,
+											 const std::vector< unsigned int > &dofs,
+											 const Vector<double> &xi,
+											 const bool update_jacobian,
+											 std::vector<Tensor<2,dim,double> > &Pe,
+											 std::vector<Tensor<2,dim,double> > &vec_F,
+											 std::vector< std::vector<Tensor<2,dim,double> > > & DPeFT_dxi)
+
 {
   std::vector< std::vector< Tensor<1,dim> > >
-                 H(PFT.size(), std::vector< Tensor<1,dim> >(dim));
+                 H(Pe.size(), std::vector< Tensor<1,dim> >(dim));
   fe_v_s.get_function_gradients(xi, H);
   
-  for( unsigned int qs = 0; qs < PFT.size(); ++qs )
-  {
-    for( unsigned int i = 0; i < dim; ++i )
-      for( unsigned int j = 0; j < dim; ++j )
-      {
-        PFT[qs][i][j]  = H[qs][i][j] + H[qs][j][i] + (H[qs][i] * H[qs][j]) 
-					   + ((!par.zero_residual_stress && (i==j))? 1.0:0.0);
-//The last term has been added since the constitutive relation is now P=mu*F instead of mu*(F-F^{-T})
-        PFT[qs][i][j] *= par.mu;
-
-        if( update_jacobian )
-        {
-          for( unsigned int k = 0; k < fe_s.dofs_per_cell; ++k )
-          {
-            PFT_Dxi[qs][k][i][j] = 0;
-            unsigned int comp_k = fe_s.system_to_component_index(k).first;
-            if( i == comp_k )
-              PFT_Dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs)[j]
-                                    + fe_v_s.shape_grad(k,qs) * H[qs][j];
-            if( j == comp_k )
-              PFT_Dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs)[i]
-                                    + fe_v_s.shape_grad(k,qs) * H[qs][i];
-            PFT_Dxi[qs][k][i][j] *= par.mu;
-          }
-        }
-      }
-  }
+   Tensor<2,dim,double> F;
+   
+  bool update_vecF = (vec_F.size()!= 0);
+   
+                 //The following variables are used when the CircumferentialFiberModel is used. 
+   Point<dim> p;
+   Tensor<1, dim, double> etheta;
+   Tensor<2, dim, double> etheta_op_etheta;
+   Tensor<2, dim, double> tmp;
   
+  for( unsigned int qs = 0; qs < Pe.size(); ++qs )
+  {
+	 for(unsigned int i=0; i <dim; ++i)
+	 {
+		F[i] = H[qs][i];
+		F[i][i] += 1.0;
+	 }
+	 
+	 if (update_vecF) 
+		vec_F[qs] = F;
+	 
+	 switch (par.material_model) 
+	 {
+		case ProblemParameters<dim>::INH_0:
+		   Pe[qs] = par.mu * ( F - transpose( invert(F) ) );
+		   if( update_jacobian )
+		   {
+			  for( unsigned int k = 0; k < fe_s.dofs_per_cell; ++k )
+			  {
+				 DPeFT_dxi[qs][k] = 0.0;
+				 unsigned int comp_k = fe_s.system_to_component_index(k).first;
+				 
+				 for( unsigned int i = 0; i < dim; ++i )
+					for( unsigned int j = 0; j < dim; ++j )
+					{
+					   if( i == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs) * F[j];
+					   if( j == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs) * F[i];
+					   DPeFT_dxi[qs][k][i][j] *= par.mu;
+					}
+			  }
+		   }
+		   break;
+		case ProblemParameters<dim>::INH_1 :
+		   Pe[qs] = par.mu * F;			  
+		   if( update_jacobian )
+		   {
+			  for( unsigned int k = 0; k < fe_s.dofs_per_cell; ++k )
+			  {
+				 DPeFT_dxi[qs][k] = 0.0;
+				 unsigned int comp_k = fe_s.system_to_component_index(k).first;
+				 
+				 for( unsigned int i = 0; i < dim; ++i )
+					for( unsigned int j = 0; j < dim; ++j )
+					{
+					   if( i == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs) * F[j];
+					   if( j == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += fe_v_s.shape_grad(k,qs) * F[i];
+					   DPeFT_dxi[qs][k][i][j] *= par.mu;
+					}
+			  }
+		   }
+		   break;
+		case ProblemParameters<dim>::CircumferentialFiberModel:
+		   p = fe_v_s.quadrature_point(qs);
+		   //Find the unit vector along the tangential direction
+		   etheta[0]=-p[1]/p.norm();
+		   etheta[1]= p[0]/p.norm();
+		   //Find the tensor product of etheta and etheta
+		   outer_product(etheta_op_etheta, etheta, etheta);
+		   contract (Pe[qs], F, etheta_op_etheta); 
+		   Pe[qs] *= par.mu;
+		   if( update_jacobian )
+		   {
+			  for( unsigned int k = 0; k < fe_s.dofs_per_cell; ++k )
+			  {
+				 DPeFT_dxi[qs][k] = 0.0;
+				 unsigned int comp_k = fe_s.system_to_component_index(k).first;
+				 
+				 for( unsigned int i = 0; i < dim; ++i )
+					for( unsigned int j = 0; j < dim; ++j )
+					{
+					   if( i == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += (fe_v_s.shape_grad(k,qs)
+												   *etheta_op_etheta)*F[j];
+					   if( j == comp_k )
+						  DPeFT_dxi[qs][k][i][j] += (fe_v_s.shape_grad(k,qs)
+												   *etheta_op_etheta)* F[i];
+					   DPeFT_dxi[qs][k][i][j] *= par.mu;
+					}
+			  }
+		   }
+		   break;   
+		default:
+		   break;
+	 }
+  }
 }
 
                  /** Assemblage of the local residual in the global residual. */
@@ -2198,8 +2403,9 @@ ImmersedFEM<dim>::distribute_constraint_on_pressure
 				 const unsigned int offset
 				 )
 {
-  for(unsigned int i=0, wi=offset; i<dofs.size();++i,++wi)
-    jacobian.add(constraining_dof, dofs[i], pressure_coefficient[wi]);
+   for(unsigned int i=0, wi=offset; i<dofs.size();++i,++wi)
+	  jacobian.add(constraining_dof, dofs[i], pressure_coefficient[wi]*scaling/area);
+   
 }
 
                  /** Determination of the dofs for the function
@@ -2215,6 +2421,74 @@ ImmersedFEM<dim>::localize
 {
   for (unsigned int i = 0; i < dofs.size(); ++i)
     local_M_gamma3_inv_A_gamma (i) = M_gamma3_inv_A_gamma(dofs[i]);
+}
+
+                 /** Calculate the error for the equilibrium solution of corresponding to a ring with circumferential fibers. */
+template <int dim> 
+void
+ImmersedFEM<dim>::calculate_error () const
+{
+  ExactSolutionRingWithFibers<dim> exact_sol(par);
+  
+  const ComponentSelectFunction<dim> pressure_mask(dim, dim+1);
+  const ComponentSelectFunction<dim> velocity_mask(std::make_pair(0,dim), dim+1);
+  
+  const QIterated<dim> qiter_err(qtrapez, par.degree+1);
+  
+  Vector<float> difference_per_cell(tria_f.n_active_cells());
+  
+  
+  VectorTools::integrate_difference(dh_f, 
+									current_xi.block(0),
+									exact_sol,
+									difference_per_cell,
+									qiter_err,
+									VectorTools::L2_norm,
+									&velocity_mask);
+  const double v_l2_norm = difference_per_cell.l2_norm();
+  
+  VectorTools::integrate_difference(dh_f, 
+									current_xi.block(0),
+									exact_sol,
+									difference_per_cell,
+									qiter_err,
+									VectorTools::H1_seminorm,
+									&velocity_mask);
+  const double v_h1_seminorm = difference_per_cell.l2_norm();
+  
+  VectorTools::integrate_difference( dh_f, 
+									current_xi.block(0),
+									exact_sol,
+									difference_per_cell,
+									qiter_err,
+									VectorTools::L2_norm,
+									&pressure_mask);
+  const double p_l2_norm = difference_per_cell.l2_norm();
+  VectorTools::integrate_difference( dh_f, 
+									current_xi.block(0),
+									exact_sol,
+									difference_per_cell,
+									qiter_err,
+									VectorTools::Linfty_norm,
+									&pressure_mask);
+  const double p_linfty_norm = difference_per_cell.linfty_norm();
+  cout<<"Linfty norm of pressure is "<<p_linfty_norm<<endl;
+  ofstream file_write;
+  file_write.open("hello_world_error_norm.dat", ios::out |ios::app);
+  if (file_write.is_open())
+  {
+	file_write.unsetf(ios::floatfield);
+	file_write << "- & " << setw(4) << tria_s.n_active_cells()
+	<<	" & "  << setw(6) << n_dofs_W
+	<< " & "  << setw(4)  << tria_f.n_active_cells()
+	<< " & "  << setw(6)  << n_dofs_up << scientific << setprecision(5)
+	<< " & "  << setw(8) << v_l2_norm
+	<< " &-& "<< setw(8) << v_h1_seminorm
+	<< " &-& "<< setw(8) << p_l2_norm
+	<< " &- \\\\ \\hline"<<endl;
+  }
+  file_write.close();
+  
 }
 
                  /** Simple initialization to zero function
