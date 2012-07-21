@@ -647,7 +647,7 @@ class ImmersedFEM
 				 const Vector<double> &xi,
 				 Vector<double> &local_A_gamma);
 						
-    void get_Pe_F_and_DPe_dxi_values (const FEValues<dim,dim> &fe_v_s,
+    void get_Pe_F_and_DPeFT_dxi_values (const FEValues<dim,dim> &fe_v_s,
 				 const std::vector< unsigned int > &dofs,
 				 const Vector<double> &xi,
 				 const bool update_jacobian,
@@ -1518,7 +1518,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
     fe_v_s.get_function_values (xit.block(1), local_Wt);
     fe_v_s.get_function_values ( xi.block(1), local_W);
     localize (local_M_gamma3_inv_A_gamma, M_gamma3_inv_A_gamma, dofs_s);
-	get_Pe_F_and_DPe_dxi_values (fe_v_s,
+	get_Pe_F_and_DPeFT_dxi_values (fe_v_s,
 								 dofs_s,
 								 xi.block(1),
 								 update_jacobian,
@@ -2159,7 +2159,7 @@ ImmersedFEM<dim>::get_Agamma_values
   std::vector<Tensor<2,dim,double> > tmp1;
   std::vector< std::vector<Tensor<2,dim,double> > > tmp2;
    
-  get_Pe_F_and_DPe_dxi_values (fe_v_s,
+  get_Pe_F_and_DPeFT_dxi_values (fe_v_s,
 								dofs,
 								xi,
 								false,
@@ -2187,7 +2187,7 @@ ImmersedFEM<dim>::get_Agamma_values
                  immersed domain. */
 template <int dim>
 void
-ImmersedFEM<dim>::get_Pe_F_and_DPe_dxi_values (const FEValues<dim,dim> &fe_v_s,
+ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (const FEValues<dim,dim> &fe_v_s,
 											 const std::vector< unsigned int > &dofs,
 											 const Vector<double> &xi,
 											 const bool update_jacobian,
