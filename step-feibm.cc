@@ -513,11 +513,6 @@ class ExactSolutionRingWithFibers :
 
     void vector_value_list(const vector< Point<dim> > &points,
                            vector <Vector <double> > &values ) const;
-  private:
-
-    ProblemParameters<dim> &par;
-//! Ciao
-
 
 // Inner radius of the ring.
 
@@ -538,6 +533,11 @@ class ExactSolutionRingWithFibers :
 // y-coordinate of the center of the ring.
 
     double y_c;
+    
+  private:
+
+    ProblemParameters<dim> &par;
+
 };
 
 // Class constructor
@@ -776,82 +776,64 @@ class ImmersedFEM
 
     Vector<double> unit_pressure;
 
-
-
-// A vector that can be used as a temporary storage of the data in
-// current_xi.  This object is defined simply for convenience.  It is
-// defined as a private member of the class to avoid that the object
-// is allocated and deallocated when used, so to gain in efficiency.
-
-    BlockVector<double> solution;
-
-
 // Number of degrees of freedom for each component of the system.
 
     unsigned int n_dofs_u, n_dofs_p, n_dofs_up, n_dofs_W, n_total_dofs;
 
+// A couple of vectors that can be used as temporary storage. They are
+// defined as a private member of the class to avoid that the object
+// is allocated and deallocated when used, so to gain in efficiency.
+    Vector<double> tmp_vec_n_total_dofs;
+    Vector<double> tmp_vec_n_dofs_up;
 
 // Matrix to be inverted when solving the problem.
-
     SparseDirectUMFPACK JF_inv;
 
 
 // Scalar used for conditioning purposes.
-
     double scaling;
 
 
 // Variable to keep track of the previous time.
-
     double previous_time;
 
 
 // The first dof of the pressure field.
-
     unsigned int constraining_dof;
 
 
 // A container to store the dofs corresponding to the pressure field.
-
     set<unsigned int> pressure_dofs;
 
 
 // Storage for the elasticity operator of the immersed domain.
-
     Vector <double> A_gamma;
 
 
 // Mass matrix of the immersed domain.
-
     SparseMatrix<double> M_gamma3;
 
 
 // Inverse of M_gamma3.
-
     SparseDirectUMFPACK M_gamma3_inv;
 
 
 // M_gamma3_inv * A_gamma.
-
     Vector <double> M_gamma3_inv_A_gamma;
 
 
 // Area of the control volume.
-
     double area;
 
 
 // Filestream that is used to output a file containing information
 // about the fluid flux, area and the centroid of the immersed domain
 // over time.
-
     ofstream global_info_file;
 
 
 // ---------------------
-
 // Function declarations
-
 // ---------------------
     void create_triangulation_and_dofs ();
 
@@ -1082,26 +1064,37 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
     grid_in_f.read_ucd (file);
   }
 
-  GridIn<dim, dim> grid_in_s;
-  grid_in_s.attach_triangulation (tria_s);
-
-  {
-    ifstream file (par.solid_mesh.c_str());
-    Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
-
-
-// A grid in ucd format is expected.
-    grid_in_s.read_ucd (file);
-  }
-
-// This is used only by the solution of the problem with
-
-// the immersed domain consisting of a circular cylinder.
   if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel)
     {
+// This is used only by the solution of the problem with the immersed
+// domain consisting of a circular cylinder.  We only implemented this
+// in two dimensions
+      Assert(dim == 2, ExcNotImplemented());
+      
+      ExactSolutionRingWithFibers<dim> ring(par);
+      Point<dim> center;
+      center[0] = ring.x_c;
+      center[1] = ring.y_c;
+
+// Construct the hyper shell using the parameter file      
+      GridGenerator::hyper_shell(tria_s, center,
+				 ring.R, ring.R+ring.w);
+      
       static const HyperShellBoundary<dim> shell_boundary;
       tria_s.set_boundary(0, shell_boundary);
     }
+  else
+    {
+      GridIn<dim, dim> grid_in_s;
+      grid_in_s.attach_triangulation (tria_s);
+
+      ifstream file (par.solid_mesh.c_str());
+      Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
+      
+// A grid in ucd format is expected.
+      grid_in_s.read_ucd (file);
+    }
+
 
   cout
     << "Number of fluid refines = "
@@ -1192,19 +1185,19 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   current_xit.reinit (all_dofs);
   current_res.reinit (all_dofs);
   newton_update.reinit (all_dofs);
-  solution.reinit (all_dofs);
-
 
 // Re-initialization of the average and unit pressure vectors.
   pressure_average.reinit (n_dofs_up);
   unit_pressure.reinit (n_dofs_up);
 
+// Re-initialization of temporary vectors
+  tmp_vec_n_total_dofs.reinit(n_total_dofs);
+  tmp_vec_n_dofs_up.reinit(n_dofs_up);
 
 // We now deal with contraint matrices.
   {
     constraints_f.clear ();
     constraints_s.clear ();
-
 
 // Enforce hanging node constraints.
     DoFTools::make_hanging_node_constraints (dh_f, constraints_f);
@@ -1360,9 +1353,7 @@ template <int dim>
 void
 ImmersedFEM<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
 {
-  static Vector<double> tmp;
-  tmp.reinit(n_dofs_up, true);
-  FEFieldFunction<dim, DoFHandler<dim>, Vector<double> > up_field (dh_f, tmp);
+  FEFieldFunction<dim, DoFHandler<dim>, Vector<double> > up_field (dh_f, tmp_vec_n_dofs_up);
 
   vector< typename DoFHandler<dim>::active_cell_iterator > cells;
   vector< vector< Point< dim > > > qpoints;
@@ -2382,16 +2373,15 @@ ImmersedFEM<dim>::run ()
 // "SparseDirectUMFPACK" and therefore the value of the (negative) of
 // the current residual must be supplied in a container of type
 // Vector<double>.  So, we first transfer the information in
-// "current_res" into a Vector<double> called "tmp" and then we carry
-// out the computation of the update.
-	      static Vector<double> tmp(current_res.size());
-	      tmp = current_res;
-	      JF_inv.solve(tmp);
+// "current_res" into temporary storage, and then we carry out the
+// computation of the update.
+	      tmp_vec_n_total_dofs = current_res;
+	      JF_inv.solve(tmp_vec_n_total_dofs);
 
 
 // Now that we have the updated of the solution into an object of type
 // Vector<double>, we repackage it into an object of type BlockVector.
-	      newton_update = tmp;
+	      newton_update = tmp_vec_n_total_dofs;
 
 
 // Finally, we determine the value of the updated solution.
