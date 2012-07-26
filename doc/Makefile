@@ -1,6 +1,6 @@
-all: ../../../doc/doxygen/tutorial/doxygen/step-feibm.h Doxyfile
+all: 
+	OLDPWD=`pwd`;
+	#cd ../../../doc/doxygen/tutorial
+	#make
+	#cd $(OLDPWD)
 	doxygen Doxyfile
-
-../../../doc/doxygen/tutorial/doxygen/step-feibm.h: ../step-feibm.cc intro.dox results.dox
-	cd ../../../doc/doxygen/tutorial
-	make
