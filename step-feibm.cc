@@ -277,6 +277,10 @@ class ProblemParameters :
 // for the pressure field.
 
     string fe_p_name;
+   
+ // Variable to store the center of the ring with circumferential fibers
+   
+   Point<dim> ring_center;
 };
 
 // Class constructor: the name of the input file is
@@ -470,6 +474,13 @@ ProblemParameters<dim>::ProblemParameters() :
 
   fe_p_name = this->get ("Finite element for pressure");
   fe_p_name +="<dim>(" + Utilities::int_to_string(degree-1) + ")";
+
+   this->enter_subsection (
+					 "Equilibrium Solution of Ring with Circumferential Fibers"
+						   );
+   ring_center[0] = this->get_double ("x-coordinate of the center of the ring");
+   ring_center[1] = this->get_double ("y-coordinate of the center of the ring");
+   this->leave_subsection();
 
 
 // The following lines help keeping track of what prm file goes
@@ -935,7 +946,6 @@ class ImmersedFEM
     inline void set_to_zero(vector<Type> &v) const;
 
     double norm(const vector<double> &v);
-
 };
 
 // Constructor:
@@ -1046,24 +1056,6 @@ template <int dim>
 void
 ImmersedFEM<dim>::create_triangulation_and_dofs ()
 {
-
-// As specified in the documentation for the "GridIn" class the
-
-// triangulation corresponding to a grid needs to be empty at
-
-// this time.
-  GridIn<dim> grid_in_f;
-  grid_in_f.attach_triangulation (tria_f);
-
-  {
-    ifstream file (par.fluid_mesh.c_str());
-    Assert (file, ExcFileNotOpen (par.fluid_mesh.c_str()));
-
-
-// A grid in ucd format is expected.
-    grid_in_f.read_ucd (file);
-  }
-
   if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel)
     {
 // This is used only by the solution of the problem with the immersed
@@ -1072,19 +1064,37 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
       Assert(dim == 2, ExcNotImplemented());
       
       ExactSolutionRingWithFibers<dim> ring(par);
-      Point<dim> center;
-      center[0] = ring.x_c;
-      center[1] = ring.y_c;
+	   
+//Construct the square domain for the control volume using the parameter file
+	   GridGenerator::hyper_cube (tria_f, 0., ring.l);  
 
 // Construct the hyper shell using the parameter file      
-      GridGenerator::hyper_shell(tria_s, center,
+      GridGenerator::hyper_shell(tria_s, Point<dim>(ring.x_c, ring.y_c),
 				 ring.R, ring.R+ring.w);
       
-      static const HyperShellBoundary<dim> shell_boundary;
+      static const HyperShellBoundary<dim> shell_boundary 
+										   (Point<dim>(ring.x_c, ring.y_c));
       tria_s.set_boundary(0, shell_boundary);
     }
   else
     {
+	   // As specified in the documentation for the "GridIn" class the
+	   
+	   // triangulation corresponding to a grid needs to be empty at
+	   
+	   // this time.
+	   GridIn<dim> grid_in_f;
+	   grid_in_f.attach_triangulation (tria_f);
+	   
+	   {
+		  ifstream file (par.fluid_mesh.c_str());
+		  Assert (file, ExcFileNotOpen (par.fluid_mesh.c_str()));
+		  
+		  
+		  // A grid in ucd format is expected.
+		  grid_in_f.read_ucd (file);
+	   }
+	   
       GridIn<dim, dim> grid_in_s;
       grid_in_s.attach_triangulation (tria_s);
 
@@ -2732,7 +2742,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 		  }
 		break;
 	  case ProblemParameters<dim>::CircumferentialFiberModel:
-		p = fe_v_s.quadrature_point(qs);
+		p = fe_v_s.quadrature_point(qs) - par.ring_center;
 
 // Find the unit vector along the tangential direction
 		etheta[0]=-p[1]/p.norm();
@@ -2953,22 +2963,16 @@ ImmersedFEM<dim>::calculate_error () const
     &pressure_mask
   );
   const double p_l2_norm = difference_per_cell.l2_norm();
-  VectorTools::integrate_difference (
-    dh_f,
-    current_xi.block(0),
-    exact_sol,
-    difference_per_cell,
-    qiter_err,
-    VectorTools::Linfty_norm,
-    &pressure_mask
-  );
-  const double p_linfty_norm = difference_per_cell.linfty_norm();
-  cout
-    << "Linfty norm of pressure is "
-    << p_linfty_norm
-    << endl;
+   
   ofstream file_write;
-  file_write.open("hello_world_error_norm.dat", ios::out |ios::app);
+   
+   string filename;
+   if(dgp_for_p)
+	  filename = "hello_world_error_norm_pFEDGP.dat";
+   else
+	  filename = "hello_world_error_norm_pFEQ.dat";
+	  
+  file_write.open(filename.c_str(), ios::out |ios::app);
   if (file_write.is_open())
     {
       file_write.unsetf(ios::floatfield);
