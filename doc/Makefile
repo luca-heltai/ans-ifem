@@ -1,4 +1,4 @@
-all: ../../../doc/doxygen/tutorial/doxygen/step-feibm.h
+all: ../../../doc/doxygen/tutorial/doxygen/step-feibm.h Doxyfile
 	doxygen Doxyfile
 
 ../../../doc/doxygen/tutorial/doxygen/step-feibm.h: ../step-feibm.cc intro.dox results.dox
