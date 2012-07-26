@@ -1,146 +1,24 @@
 <br>
 
-<i>
-This program grew out of a student project by Abner Salgado at Texas A&M
-University. Most of the work for this program is by him.
-</i>
-
 <a name="Intro"></a>
 <h1> Introduction </h1>
 
-<a name="Motivation"></a>
-<h3> Motivation </h3>
-The purpose of this program is to show how to effectively solve the incompressible time-dependent
-Navier-Stokes equations. These equations describe the flow of a viscous incompressible fluid and read
-@f{align*}
-  u_t + u \cdot \nabla u - \nu \Delta u + \nabla p = f, \\
-  \nabla \cdot u = 0,
-@f}
-where $u$ represents the velocity of the flow and $p$ the pressure. This system of equations is supplemented by
-the initial condition
-@f[
-  u |_{t=0} = u_0,
-@f]
-with $u_0$ sufficiently smooth and solenoidal, and suitable boundary conditions. For instance, an admissible boundary
-condition, is
-@f[
-  u|_{\partial\Omega} = u_b.
-@f]
-It is possible to prescribe other boundary conditions as well. In the test case that we solve here the boundary
-is partitioned into two disjoint subsets $\partial\Omega = \Gamma_1 \cup \Gamma_2$ and we have
-@f[
-  u|_{\Gamma_1} = u_b,
-@f]
-and
-@f[
- u\times n|_{\Gamma_2} = 0, \quad p|_{\Gamma_2} = 0
-@f]
-where $n$ is the outer unit normal. The boundary conditions on $\Gamma_2$ are often
-used to model outflow conditions.
+<p>
+We present the implementation of a solution scheme for fluid-structure interaction problems via the finite element software library <tt>deal.II</tt>.  The solution scheme is an immersed finite element method in which two independent discretizations are used for the fluid and immersed deformable body.  In this type of formulation the support of the equations of motion of the fluid is extended to cover the union of the solid and fluid domains.  The equations of motion over the extended solution domain govern the flow of a fluid under the action of a body force field.  This body force field informs the fluid of the presence of the immersed solid.  The velocity field of the immersed solid is the restriction over the immersed domain of the velocity field in the extended equations of motion.  The focus of this paper is to show how the determination of the motion of the immersed domain is carried out in practice.  We show that our implementation is automatically obtained from the choice of finite element spaces over the immerse solid and the extended fluid domains.  We present some preliminary results concerning the accuracy of the proposed method.
 
-In previous tutorial programs (see for instance step-20 and
-step-22) we have seen
-how to solve the time-independent Stokes equations using a Schur complement approach. For the
-time-dependent case, after time discretization, we would arrive at a system like
-@f{align*}
-  \frac1\tau u^k - \nu \Delta u^k + \nabla p^k = F^k, \\
-  \nabla \cdot u^k = 0,
-@f}
-where $\tau$ is the time-step. Although the structure of this system is similar to the Stokes system and thus
-it could be solved using a Schur complement approach, it turns out that the condition number of the
-Schur complement is proportional to $\tau^{-2}$. This makes the system very
-difficult to solve, and means that for the Navier-Stokes equations, this is
-not a useful avenue to the solution.
+</p>
 
-<a name="Projection"></a>
-<h3> Projection methods </h3>
+<p>
+The general theory underlying the current development has been presented in Heltai, L. and F. Costanzo (2012), "Variational implementation of immersed finite element methods," <i>Computer Methods in Applied Mechanics and Engineering</i>, 229&ndash;232, p. 110&ndash;127.
+</p>
 
-Rather, we need to come up with a different approach to solve the time-dependent Navier-Stokes
-equations. The difficulty in their solution comes from the fact that the velocity and the pressure are coupled
-through the constraint
-@f[
-  \nabla \cdot u = 0,
-@f]
-for which the pressure is the Lagrange multiplier.
-Projection methods aim at decoupling this constraint from the diffusion (Laplace) operator.
 
-Let us shortly describe how the projection methods look like in a semi-discrete setting. The objective is to
-obtain a sequence of velocities $\{u^k\}$ and pressures $\{p^k\}$. We will
-also obtain a sequence $\{\phi^k\}$ of auxiliary variables.
-Suppose that from the initial conditions, and an application of a first order method we have found
-$(u^0,p^0,\phi^0=0)$ and $(u^1,p^1,\phi^1=p^1-p^0)$. Then the projection method consists of the following steps:
-<ul>
-  <li> <b>Step 0</b>: Extrapolation. Define:
-  @f[
-    u^\star = 2u^k - u^{k-1}, \quad p^\sharp = p^k + \frac43 \phi^k - \frac13 \phi^{k-1}.
-  @f]
-  <li> <b>Step 1</b>: Diffusion step. We find $u^{k+1}$ that solves the single
-  linear equation
-  @f[
-    \frac1{2\tau}\left( 3u^{k+1} - 4u^k + u^{k-1} \right)
-    + u^\star \cdot\nabla u^{k+1} + \frac12 \left( \nabla \cdot u^\star \right) u^{k+1}
-    -\nu \Delta u^{k+1} + \nabla p^\sharp
-    = f^{k+1},
-    \quad
-    u^{k+1}|_{\Gamma_1} = u_b,
-    \quad
-    u^{k+1} \times n|_{\Gamma_2} = 0.
-  @f]
 
-  <li> <b>Step 2</b>: Projection. Find $\phi^{k+1}$ that solves
-  @f[
-    \Delta \phi^{k+1} = \frac3{2\tau} \nabla \cdot u^{k+1},
-    \quad
-    \partial_n \phi^{k+1}|_{\Gamma_1} = 0,
-    \quad
-    \phi^{k+1}|_{\Gamma_2} = 0
-  @f]
-  <li> <b>Step 3</b>: Pressure correction. Here we have two options:
-    <ul>
-      <li> <i>Incremental Method in Standard Form</i>. The pressure is updated by:
-      @f[
-        p^{k+1} = p^k + \phi^{k+1}.
-      @f]
-      <li> <i>Incremental Method in Rotational Form</i>. In this case
-      @f[
-        p^{k+1} = p^k + \phi^{k+1} - \nu \nabla \cdot u^{k+1}.
-      @f]
-    </ul>
-</ul>
+<a name="Governing Equations"></a>
+<h3> Governing Equations </h3>
+@f B_{t}@f in the Fig. below
 
-Without going into details, which can be found in the corresponding literature, let us remark a few things about the
-projection methods that we have just described:
-<ul>
-  <li> The advection term $u\cdot\nabla u$ is replaced by its <i>skew symmetric form</i>
-  @f[
-    u \cdot \nabla u + \frac12 \left( \nabla\cdot u \right) u.
-  @f]
-  This is consistent with the continuous equation (because $\nabla\cdot u = 0$,
-  though this is not true pointwise for the discrete solution) and it is needed to
-  guarantee unconditional stability of the
-  time-stepping scheme. Moreover, to linearize the term we use the second order extrapolation $u^\star$ of
-  $u^{k+1}$.
-  <li> The projection step is a realization of the Helmholtz decomposition
-  @f[
-    L^2(\Omega)^d = H \oplus \nabla H^1_{\Gamma_2}(\Omega),
-  @f]
-  where
-  @f[
-    H = \left\{ v \in L^2(\Omega)^d:\  \nabla\cdot v =0, \  v\cdot n|_{\Gamma_1} = 0 \right\},
-  @f]
-  and
-  @f[
-    H^1_{\Gamma_2}(\Omega) = \left\{ q \in H^1(\Omega):\ q|_{\Gamma_2} = 0 \right\}.
-  @f]
-  Indeed, if we use this decomposition on $u^{k+1}$ we obtain
-  @f[
-    u^{k+1} = v^{k+1} + \nabla \left( \frac{2\tau}{3}  \phi^{k+1} \right),
-  @f]
-  with $v^{k+1}\in H$. Taking the divergence of this equation we arrive at the projection equation.
-  <li> The more accurate of the two variants outlined above is the rotational
-  one. However, the program below implements both variants. Moreover, in the author's experience,
-  the standard form is the one that should be used if, for instance, the viscosity $\nu$ is variable.
-</ul>
+represents the configuration of a regular body at time $t$.   $B_{t}$ is a (possibly multiply connected) proper subset of a fixed control volume $\Omega$:  $\Omega\setminus B_{t}$ is filled by a fluid and $B_{t}$ is an <i>immersed body</i>.  $B$ is the reference configuration of the immersed body.  We denote the position of points in $B$ by $\boldsymbol{s}$, whereas we denote the position at time $t$ of a point in $\Omega$ by $\bolsymbol{x}(t)$.
 
 
 <a name ="fullydiscrete"></a>
