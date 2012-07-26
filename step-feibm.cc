@@ -529,7 +529,7 @@ class ExactSolutionRingWithFibers :
 
     double R;
 
-// Outer radius of the ring.
+// Width of the ring
 
     double w;
 
@@ -537,18 +537,13 @@ class ExactSolutionRingWithFibers :
 
     double l;
 
-// x-coordinate of the center of the ring.
+// Center of the ring
 
-    double x_c;
+    Point<dim> center;
 
-// y-coordinate of the center of the ring.
-
-    double y_c;
-    
   private:
 
     ProblemParameters<dim> &par;
-
 };
 
 // Class constructor
@@ -567,8 +562,8 @@ ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
   R = par.get_double ("Inner radius of the ring");
   w = par.get_double ("Width of the ring");
   l = par.get_double ("Any edge length of the (square) control volume");
-  x_c = par.get_double ("x-coordinate of the center of the ring");
-  y_c = par.get_double ("y-coordinate of the center of the ring");
+  center[0] = par.get_double ("x-coordinate of the center of the ring");
+  center[1] = par.get_double ("y-coordinate of the center of the ring");
   par.leave_subsection ();
 }
 
@@ -584,7 +579,7 @@ ExactSolutionRingWithFibers<dim>::vector_value
   Vector <double> &values
 ) const
 {
-  double r = p.distance (Point<dim> (x_c, y_c));
+  double r = p.distance (center);
 
   values = 0.0;
 
@@ -1069,11 +1064,10 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 	   GridGenerator::hyper_cube (tria_f, 0., ring.l);  
 
 // Construct the hyper shell using the parameter file      
-      GridGenerator::hyper_shell(tria_s, Point<dim>(ring.x_c, ring.y_c),
+      GridGenerator::hyper_shell(tria_s, ring.center,
 				 ring.R, ring.R+ring.w);
       
-      static const HyperShellBoundary<dim> shell_boundary 
-										   (Point<dim>(ring.x_c, ring.y_c));
+      static const HyperShellBoundary<dim> shell_boundary(ring.center);
       tria_s.set_boundary(0, shell_boundary);
     }
   else
