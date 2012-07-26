@@ -4,3 +4,5 @@ all:
 	#make
 	#cd $(OLDPWD)
 	doxygen Doxyfile
+clean: 
+	rm -rf html latex
