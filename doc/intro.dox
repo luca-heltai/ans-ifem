@@ -29,7 +29,7 @@ From the above relation we have that $F(s,t) = I + \nabla_{s} w(s,t)$, where $I$
 
 <p>
 <b>Constitutive Equations.</b>
-The fluid is assumed to be Newtonian so that its Cauchy stress is $\sigma_{f} = -p I + \mu [\nabla_{x} u + (\nabla_{x} u)^{T}]$, where $p$ is the Lagrange multiplier for the enforcement of incompressibility, $\mu$ is the dynamic viscosity, $\nabla_{x}$ is the gradient operator relative to position in the current configuration, and $u$ is the velocity field.  For a Newtonian fluid, $p$ is also the pressure (mean normal stress).  The immersed solid is assumed to be incompressible and viscoelastic, with the viscous response identical to that of the fluid.  The elastic response is assumed to be admit a strain energy $W_{s}^{e}(F)$, which we assumed to be a convex function of the deformation gradient.  Hence the Cauchy stress in the solid is given by $\sigma_{s} = - p I + \mu [\nabla_{x} u + (\nabla_{x} u)^{T}] + \sigma_{s}^{e}$, with $\sigma_{s}^{e} = J^{-1} P_{s}^{e} F^{-T}$, where $P_{s}^{e} = \partial W_{s}^{e}/\partial F$ is the first Piola-Kirchhoff stress tensor of the solid.
+The fluid is assumed to be Newtonian so that its Cauchy stress is $\sigma_{f} = -p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}]$, where $p$ is the Lagrange multiplier for the enforcement of incompressibility, $\eta$ is the dynamic viscosity, $\nabla_{x}$ is the gradient operator relative to position in the current configuration, and $u$ is the velocity field.  For a Newtonian fluid, $p$ is also the pressure (mean normal stress).  The immersed solid is assumed to be incompressible and viscoelastic, with the viscous response identical to that of the fluid.  The elastic response is assumed to be admit a strain energy $W_{s}^{e}(F)$, which we assumed to be a convex function of the deformation gradient.  Hence the Cauchy stress in the solid is given by $\sigma_{s} = - p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}] + \sigma_{s}^{e}$, with $\sigma_{s}^{e} = J^{-1} P_{s}^{e} F^{-T}$, where $P_{s}^{e} = \partial W_{s}^{e}/\partial F$ is the first Piola-Kirchhoff stress tensor of the solid.
 </p>
 <p>
 <b>Velocity field and Displacement of the Immersed Body.</b>
@@ -69,7 +69,7 @@ The primary unknowns of the problem are the velocity field $u(x,t)$ in $\Omega$,
 \int_{\Omega} \rho(\dot{u}(x,t) - b(x,t)] \cdot v(x,t)
 - \int_{\Omega} p(x,t) \, \nabla_{x} \cdot v(x,t)
 +
-\int_{\Omega} \mu [\nabla u(x,t) + (\nabla u(x,t))^{T}] \cdot \nabla v(x,t)
+\int_{\Omega} \eta [\nabla u(x,t) + (\nabla u(x,t))^{T}] \cdot \nabla v(x,t)
 - \int_{\partial \Omega_{N}} \tau_{g}(x,t) \cdot v(x,t)
 + \int_{B} P_{s}^{e}(s,t) F^{T}(s,t) \cdot [\nabla_{x} v(x,t)\big|_{x = s + w(s,t)}] = 0,
 @f]
