@@ -93,7 +93,7 @@ using namespace std;
 // viscosity), and to other numerical aspects of the simulation (e.g.,
 // names for the grid files, the specification of the boundary
 // conditions). This class is derived from the ParameterHandler class
-// in <b>deal.II</b>.
+// in <code>deal.II</code>.
 
 template <int dim>
 class ProblemParameters :
@@ -172,9 +172,8 @@ class ProblemParameters :
     unsigned int ref_s;
 
 
-// Maps of boundary value functions:
-//   1st: a boundary indicator;
-//   2nd: a boundary value function.
+// Maps of boundary value functions: 1st: a boundary indicator;
+// 2nd: a boundary value function.
 
     map<unsigned char, const Function<dim> *> boundary_map;
 
@@ -192,10 +191,8 @@ class ProblemParameters :
     vector<bool> component_mask;
 
 
-// Map storing the boundary conditions.
-// 1st: a boundary degree of freedom;
-// 2nd: the value of field corresponding to the given degree of
-// freedom.
+// Map storing the boundary conditions: 1st: a boundary degree of freedom;
+// 2nd: the value of field corresponding to the given degree of freedom.
 
     map<unsigned int, double> boundary_values;
 
@@ -258,12 +255,12 @@ class ProblemParameters :
 // List of available consitutive models for the elastic
 // stress of the immersed solid:
 //
-// INH_0: incompressible neo-Hookean with P^{e} = mu F.
+// INH_0: incompressible neo-Hookean with $P_{s}^{e} = \mu F$.
 //
-// INH_1: incompressible neo-Hookean with P^{e} = mu (F - F^{-T}).
+// INH_1: incompressible neo-Hookean with $P_{s}^{e} = \mu (F - F^{-T})$.
 //
 // CircumferentialFiberModel:
-// P^{e} = mu F (e_{\theta} \otimes e_{\theta}) F^{-T}.
+// $P_{s}^{e} = \mu F (e_{\theta} \otimes e_{\theta}) F^{-T}$.
 
     enum MaterialModel {INH_0 = 1, INH_1, CircumferentialFiberModel};
 
@@ -284,7 +281,7 @@ class ProblemParameters :
 };
 
 // Class constructor: the name of the input file is
-// <i>immersed_fem.prm</i>. If the file does not exist at run time, it
+// <code>immersed_fem.prm</code>. If the file does not exist at run time, it
 // is created, and the simulation parameters are given default values.
 
 template <int dim>
@@ -297,7 +294,6 @@ ProblemParameters<dim>::ProblemParameters() :
 {
 
 // Declaration of parameters for the ParsedFunction objects
-
 // in the class.
   this->enter_subsection("W0");
   ParsedFunction<dim>::declare_parameters(*this, dim);
@@ -515,7 +511,7 @@ class ExactSolutionRingWithFibers :
 
 // No default constructor is defined. Simulation objects must be
 // initialized by assigning the simulation parameters, which are
-// elements of objects of type <b>ProblemParameters</b>.
+// elements of objects of type <code>ProblemParameters</code>.
 
     ExactSolutionRingWithFibers (ProblemParameters<dim> &par);
 
@@ -529,7 +525,7 @@ class ExactSolutionRingWithFibers :
 
     double R;
 
-// Width of the ring
+// Width of the ring.
 
     double w;
 
@@ -537,7 +533,7 @@ class ExactSolutionRingWithFibers :
 
     double l;
 
-// Center of the ring
+// Center of the ring.
 
     Point<dim> center;
 
@@ -546,7 +542,7 @@ class ExactSolutionRingWithFibers :
     ProblemParameters<dim> &par;
 };
 
-// Class constructor
+// Class constructor.
 
 template<int dim>
 ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
@@ -568,8 +564,7 @@ ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
 }
 
 // It provides the Lagrange multiplier (pressure)
-//    distribution in the control volume and in the ring
-//    at equilibrium.
+// distribution in the control volume and in the ring at equilibrium.
 
 template<int dim>
 void
@@ -612,7 +607,7 @@ ExactSolutionRingWithFibers<dim>::vector_value_list
 }
 
 // It defines simulations objects. The only method in the public
-// interface is <b>run()</b>, which is invoked to carry out the
+// interface is <code>run()</code>, which is invoked to carry out the
 // simulation.
 
 template <int dim>
@@ -639,14 +634,14 @@ class ImmersedFEM
 
 
 // Vector of boundary indicators. The type of this vector matches the
-// return type of the function <b>Triangulation< dim, spacedim
-// >::get_boundary_indicator()</b>.
+// return type of the function <code>Triangulation< dim, spacedim
+// >::get_boundary_indicator()</code>.
 
     vector<unsigned char> boundary_indicators;
 
 
 // Triangulation over the control volume (fluid domain).  Following
-// <b>deal.II</b> conventions, a triangulation pertains to a manifold
+// <code>deal.II</code> conventions, a triangulation pertains to a manifold
 // of dimension <i>dim</i> embedded in a space of dimension
 // <i>spacedim</i>. In this case, only a single dimensional parameter
 // is specified so that the dimension of the manifold and of the
@@ -656,7 +651,7 @@ class ImmersedFEM
 
 
 // Triangulations of the immersed domain (solid domain).  Following
-// <b>deal.II</b> conventions, a triangulation pertains to a manifold
+// <code>deal.II</code> conventions, a triangulation pertains to a manifold
 // of dimension <i>dim</i> embedded in a space of dimension
 // <i>spacedim</i>. While in this case the two dimension parameters
 // are set equal to each other, it is possible to formulate problems
@@ -666,22 +661,22 @@ class ImmersedFEM
     Triangulation<dim, dim> tria_s;
 
 
-// FESystems for the control volume. It consists of two fields:
+// <codeFESystem</code>s for the control volume. It consists of two fields:
 // velocity (a vector field of dimension <i>dim</i>) and pressure (a
 // scalar field). The meaning of the parameter <i>dim</i> is as for
-// the <b>Triangulation<dim> tria_f</b> element of the class.
+// the <code>Triangulation<dim> tria_f</code> element of the class.
 
     FESystem<dim> fe_f;
 
 
 // A variable to check whether the pressure field is approximated
-// using the FE_DGP elements.
+// using the <code>FE_DGP</code> elements.
 
     bool dgp_for_p;
 
 
-// This is FESystems for the immersed domain. It consists of a the
-// <b>Triangulation<dim> tria_s</b> element of the class.
+// This is <code>FESystems</code> for the immersed domain. It consists of a the
+// <code>Triangulation<dim> tria_s</code> element of the class.
 
     FESystem<dim, dim> fe_s;
 
@@ -701,7 +696,7 @@ class ImmersedFEM
 // through the fluid, it is important to be able to conveniently
 // describe quantities defined over the immersed domain according to
 // an Eulerian view. It is therefore convenient to define a
-// <b>MappingQEulerian</b> object that will support such a
+// <code>MappingQEulerian</code> object that will support such a
 // description.
 
     MappingQEulerian<dim, Vector<double>, dim> * mapping;
@@ -738,8 +733,8 @@ class ImmersedFEM
     BlockSparseMatrix<double> JF;
 
 
-// Object of BlockSparseMatrix<double> to be used in place of the real
-// Jacobian when the real Jacobian is not to be modified.
+// Object of <code>BlockSparseMatrix<double></code> type to be used in
+// place of the real Jacobian when the real Jacobian is not to be modified.
 
 
     BlockSparseMatrix<double> dummy_JF;
@@ -832,7 +827,7 @@ class ImmersedFEM
     double area;
 
 
-// Filestream that is used to output a file containing information
+// File stream that is used to output a file containing information
 // about the fluid flux, area and the centroid of the immersed domain
 // over time.
     ofstream global_info_file;
@@ -947,7 +942,7 @@ class ImmersedFEM
 //    Initializes the FEM system of the control volume;
 //    Initializes the FEM system of the immersed domain;
 //    Initializes, corresponding dof handlers, and the quadrature rule;
-//    It runs the "create_triangulation_and_dofs" function.
+//    It runs the <code>create_triangulation_and_dofs</code> function.
 
 template <int dim>
 ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
@@ -981,7 +976,7 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
   global_info_file.open((par.output_name+"_global.gpl").c_str());
 }
 
-// Distructor: deletion of pointers created with <b>new</b> and
+// Distructor: deletion of pointers created with <code>new</code> and
 // closing of the record keeping file.
 
 template <int dim>
@@ -1009,7 +1004,6 @@ ImmersedFEM<dim>::compute_current_bc (const double t)
 
 
 // Set to zero the value of the first dof associated to
-
 // the pressure field.
   if(par.fix_pressure == true) par.boundary_values[constraining_dof] = 0;
 }
@@ -1041,8 +1035,8 @@ ImmersedFEM<dim>::apply_current_bc
 // immersed domain.  It distributes degrees of freedom over said
 // triangulations. Both grids are assumed to be available in UCD
 // format. The naming convention is as follows:
-// <i>fluid_[dim]d.inp</i> for the control volume and
-// <i>solid_[dim]d.inp</i> for the immersed domain. This function also
+// <code>fluid_[dim]d.inp</code> for the control volume and
+// <code>solid_[dim]d.inp</code> for the immersed domain. This function also
 // sets up the constraint matrices for the enforcement of Dirichlet
 // boundary conditions. In addition, it sets up the framework for
 // enforcing the initial conditions.
@@ -1055,15 +1049,15 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
     {
 // This is used only by the solution of the problem with the immersed
 // domain consisting of a circular cylinder.  We only implemented this
-// in two dimensions
+// in two dimensions.
       Assert(dim == 2, ExcNotImplemented());
       
       ExactSolutionRingWithFibers<dim> ring(par);
 	   
-//Construct the square domain for the control volume using the parameter file
+// Construct the square domain for the control volume using the parameter file.
 	   GridGenerator::hyper_cube (tria_f, 0., ring.l);  
 
-// Construct the hyper shell using the parameter file      
+// Construct the hyper shell using the parameter file.      
       GridGenerator::hyper_shell(tria_s, ring.center,
 				 ring.R, ring.R+ring.w);
       
@@ -1073,9 +1067,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   else
     {
 	   // As specified in the documentation for the "GridIn" class the
-	   
 	   // triangulation corresponding to a grid needs to be empty at
-	   
 	   // this time.
 	   GridIn<dim> grid_in_f;
 	   grid_in_f.attach_triangulation (tria_f);
@@ -1125,18 +1117,14 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 
 // Distribution of the degrees of freedom. Both for the solid
-
 // and fluid domains, the dofs are renumbered first globally
-
 // and then by component.
   dh_f.distribute_dofs (fe_f);
   DoFRenumbering::boost::Cuthill_McKee (dh_f);
 
 
 // Consistently with the fact that the various components of
-
 // the system are stored in a block matrix, now renumber
-
 // velocity and pressure component wise.
   vector<unsigned int> block_component (dim+1,0);
   block_component[dim] = 1;
@@ -1147,7 +1135,6 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 
 // Accounting of the number of degrees of freedom for the fluid
-
 //  domain on a block by block basis.
   n_dofs_u  = dofs_per_block[0];
   n_dofs_p  = dofs_per_block[1];
@@ -1194,7 +1181,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   pressure_average.reinit (n_dofs_up);
   unit_pressure.reinit (n_dofs_up);
 
-// Re-initialization of temporary vectors
+// Re-initialization of temporary vectors.
   tmp_vec_n_total_dofs.reinit(n_total_dofs);
   tmp_vec_n_dofs_up.reinit(n_dofs_up);
 
@@ -1210,7 +1197,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 // To solve the problem we first assemble the Jacobian of the residual
 // using zero boundary values for the velocity. The specification of
-// the actual boundary values is done later by the "apply_current_bc"
+// the actual boundary values is done later by the <code>apply_current_bc</code>
 // function.
     VectorTools::interpolate_boundary_values (
       StaticMappingQ1<dim>::mapping,
@@ -1279,9 +1266,9 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
     csp.block(1,1).reinit (n_dofs_W , n_dofs_W );
 
 
-// As stated in the documentation, now we *must* call the function
-// csp.collect_sizes.() since have changed the size of the sub-objects
-// of the object csp.
+// As stated in the documentation, now we <i>must</i> call the function
+// <code>csp.collect_sizes.()</code> since have changed the size
+// of the sub-objects of the object <code>csp</code>.
     csp.collect_sizes();
 
     Table< 2, DoFTools::Coupling > coupling(dim+1,dim+1);
@@ -1338,12 +1325,13 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 
 // Creating the mass matrix for the solid domain and storing its
-// inverse
+// inverse.
   ConstantFunction<dim> phi_b_func (par.Phi_B, dim);
   M_gamma3.reinit (sparsity.block(1,1));
 
 
-// Using the dealii in-built functionality to create the mass matrix.
+// Using the <code>deal.II</code> in-built functionality to
+// create the mass matrix.
   MatrixCreator::create_mass_matrix (dh_s, quad_s, M_gamma3, &phi_b_func);
   M_gamma3_inv.initialize (M_gamma3);
 
@@ -1460,9 +1448,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 )
 {
 
-// Determine whether or not the calculation of the Jacobian is
-
-// needed.
+// Determine whether or not the calculation of the Jacobian is needed.
   bool update_jacobian = !jacobian.empty();
 
 
@@ -1513,12 +1499,12 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Computation of the maximum number of degrees of freedom one could
-// have on a "fluid-solid interaction cell".  RATIONALE: the coupling
+// have on a fluid-solid interaction cell.  <b>Rationale</b> the coupling
 // of the fluid and solid domains is computed by finding each of the
 // fluid cells that interact with a given solid cell. In each
-// "interaction instance" we will be dealing with a total number of
-// degrees of freedom that is the sum of the dofs of the "current"
-// solid cell and the dofs of the "current" fluid cell in the list of
+// interaction instance we will be dealing with a total number of
+// degrees of freedom that is the sum of the dofs of the current
+// solid cell and the dofs of the current fluid cell in the list of
 // fluid cells interacting with the solid cell in question.
   unsigned int n_local_dofs = fe_f.dofs_per_cell + fe_s.dofs_per_cell;
 
@@ -1528,7 +1514,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
   vector< unsigned int > dofs_s(fe_s.dofs_per_cell);
 
 
-// FEValues for the fluid.
+// <code>FEValues</code> for the fluid.
   FEValues<dim> fe_f_v (fe_f,
 			quad_f,
 			update_values |
@@ -1543,8 +1529,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // The local residual vector: the largest possible size of this
-
-// vector is n_local_dofs.
+// vector is <code>n_local_dofs</code>.
   vector<double> local_res(n_local_dofs);
   vector<Vector<double> > local_force(nqpf, Vector<double>(dim+1));
   FullMatrix<double> local_jacobian;
@@ -1552,23 +1537,25 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Since we want to solve a system of equations of the form
-// F(xi', xi, t) = 0,
-// we need to manage the information in xi' as though it were
-// independent of the information in xi. We do so by defining a
+// $f(\xi', \xi, t) = 0$,
+// we need to manage the information in $\xi'$ as though it were
+// independent of the information in $\xi$. We do so by defining a
 // vector of local degrees of freedom that has a length equal
 // to twice the total number of local degrees of freedom.
-// This information is stored in the vector "local_x".
-// * The first fe_f.dofs_per_cell elements of local_x contain
-//   the elements of xi' corresponding to the current fluid
-//   cell.
-// * The subsequent fe_s.dofs_per_cell elements of local_x
-//   contain the elements of xi' corresponding to the current
-//   solid cell.
-// * The subsequent fe_f.dofs_per_cell elements of local_x
-//   contain the elements of xi corresponding to the current
-//   fluid cell.
-// * The subsequent fe_s.dofs_per_cell elements of local_x
-
+// This information is stored in the vector <code>local_x</code>.
+// <ul>
+// <li> The first <code>fe_f.dofs_per_cell</code> elements of
+//      <code>local_x</code> contain the elements of $\xi'$
+//      corresponding to the current fluid cell.
+// <li> The subsequent <code>fe_s.dofs_per_cell</code> elements of
+//      <code>local_x</code> contain the elements of $\xi'$ corresponding to the
+//      current solid cell.
+// <li> The subsequent <code>fe_f.dofs_per_cell</code> elements of
+//      <code>local_x</code> contain the elements of $\xi$ corresponding to the
+//      current fluid cell.
+// <li> The subsequent <code>fe_s.dofs_per_cell</code> elements of
+//      <code>local_x</code>.
+// <ul>
 
 // Definition of the local dependent variables for the fluid.
   vector<Vector<double> > local_upt(nqpf, Vector<double>(dim+1));
@@ -1581,7 +1568,6 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Initialization of the local contribution to the pressure
-
 // average.
   double local_average_pressure = 0.0;
   vector<double> local_pressure_coefficient(n_local_dofs);
@@ -1591,12 +1577,10 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // OPERATORS DEFINED OVER THE ENTIRE DOMAIN: BEGIN
 // ------------------------------------------------------------
 
-// ============================================================
 // We now determine the contribution to the residual due to the
 // fluid.  This is the standard Navier-Stokes component of the
 // problem.  As such, the contributions are to the equation in
-// V' and to the equation in Q'.
-// ============================================================
+// $V'$ and to the equation in $Q'$.
 
 
 // These iterators point to the first and last active cell of
@@ -1612,7 +1596,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
       cell->get_dof_indices(dofs_f);
 
 
-// Re-initialization of the FEValues.
+// Re-initialization of the <code>FEValues</code>.
       fe_f_v.reinit(cell);
 
 
@@ -1653,13 +1637,13 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  comp_i = fe_f.system_to_component_index(i).first;
 	  for(unsigned int q=0; q< nqpf; ++q)
 
-// ------------------------------------
-// Contribution to the equation in V'.
-// ------------------------------------
+// -------------------------------------
+// Contribution to the equation in $V'$.
+// -------------------------------------
 	    if(comp_i < dim)
 	      {
 
-// rho (ut - b).v - p div v
+// $\rho [(\partial u/\partial t) - b ) \cdot v - p (\nabla \cdot v)$
 		local_res[i] += par.rho
 				* ( local_upt[q](comp_i)
 				    -   local_force[q](comp_i) )
@@ -1686,8 +1670,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 		      }
 		  }
 
-// T_{f} . grad_v + rho (grad_u u) . v
-// where T_{f} = 2 \eta (1/2) (L + L^{T})
+// $\eta [\nabla_{x} u + (\nabla_{x} u)^{T}] \cdot \nabla v + \rho (\nabla_{x} u) \cdot v$.
 		for(unsigned int d=0; d<dim; ++d)
 		  {
 		    local_res[i] += par.eta
@@ -1738,7 +1721,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // Contribution to the equation in Q'.
 // ------------------------------------
 
-// - q div u
+// $-q (\nabla_{x} \cdot u)$
 		for(unsigned int d=0; d<dim; ++d)
 		  local_res[i] -= local_grad_up[q][d][d]
 				  * fe_f_v.shape_value(i,q)
@@ -1782,7 +1765,6 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Now the contribution to the residual due to the current cell
-
 // is assembled into the global system's residual.
       distribute_residual(residual.block(0), local_res, dofs_f, 0);
       if(update_jacobian)
@@ -1816,22 +1798,22 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // OPERATORS DEFINED OVER THE IMMERSED DOMAIN: BEGIN
 // -------------------------------------------------
   
-// We distinguish two orders or organization:
-//  
-// FIRST: we have a cycle
+// We distinguish two orders of organization:
+//  <ol>
+// <li> we have a cycle
 // over the cells of the immersed domain.  For each cell of the
 // immersed domain we determine the cells in the fluid domain
 // interacting with the cell in question.  Then we cycle over each of
 // the fluid cell.
 //  
-// SECOND: The operators defined over the immersed
+// <li> The operators defined over the immersed
 // domain contribute to all three of the equations forming the
 // problem.  We group the operators in question by equation.
 // Specifically, we first deal with the terms that contribute to the
-// equation in V', then we deal with the terms that contribute to Q',
-// and finally we deal with the terms that contribute to Y'.
-//
-// NOTE: In the equation in Y' there is contribution that does
+// equation in $V'$, then we deal with the terms that contribute to $Q'$,
+// and finally we deal with the terms that contribute to $Y'$.
+// </ol>
+// <b>Note:</b> In the equation in $Y'$ there is contribution that does
 // not arise from the interaction of solid and fluid.
 
 
@@ -1852,12 +1834,17 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Local storage of the
-//  * velocity in the solid: Wt;
-//  * displacement in the solid: W;
-//  * Pe F^{T}, which is the work conjugate of the velocity
-//    gradient when measured over the deformed configuration.
-//  * Frechet derivative of PeFT with respect to degrees of
-//    freedom in a solid cell: DPeFT_dxi.
+// <ul>
+//  <li> velocity in the solid ($\partial w/\partial t$): <code>local_Wt</code>;
+//  <li> displacement in the solid ($w$): <code>local_W</code>;
+//  <li> first Piola-Kirchhoff stress: <code>Pe</code>;
+//  <li> deformation gradient ($F$): <code>F</code>;
+//  <li> $P_{s}^{e} F^{T}$, which is the work conjugate of the velocity
+//       gradient when measured over the deformed configuration:
+//       <code>PeFT</code>;
+//  <li> Frechet derivative of $P_{s}^{e} F^{T}$ with respect to degrees of
+//    freedom in a solid cell: <code>DPeFT_dxi</code>.
+// </ul>
   vector<Vector<double> > local_Wt(nqps, Vector<double>(dim));
   vector<Vector<double> > local_W (nqps, Vector<double>(dim));
   vector<Tensor<2,dim,double> > Pe(nqps, Tensor<2,dim,double>());
@@ -1875,8 +1862,8 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // domain.
   A_gamma = 0.0;
 
-// Definition of the local contributions to A_gamma and the product of
-// the inverse of the mass matrix of the immersed domain with A_gamma.
+// Definition of the local contributions to $A_{\gamma}$ and the product of
+// the inverse of the mass matrix of the immersed domain with $A_{\gamma}$.
   Vector<double> local_A_gamma (fe_s.dofs_per_cell);
   Vector<double> local_M_gamma3_inv_A_gamma (fe_s.dofs_per_cell);
 
@@ -1889,7 +1876,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 				   update_quadrature_points);
 
 
-// FEValues to carry out integrations over the solid domain.
+// <code>FEValues</code> to carry out integrations over the solid domain.
   FEValues<dim,dim> fe_v_s(fe_s,
 			   quad_s,
 			   update_quadrature_points |
@@ -1899,15 +1886,14 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Iterators pointing to the beginning and end cells
-
 // of the active triangulation for the solid domain.
   typename DoFHandler<dim,dim>::active_cell_iterator
     cell_s = dh_s.begin_active(),
     endc_s = dh_s.end();
 
 
-// Now we cycle over the cells of the solid domain to evaluate A_gamma
-// and M_gamma3_inv_A_gamma
+// Now we cycle over the cells of the solid domain to evaluate $A_{\gamma}$
+// and $M_{\gamma 3}^{-1} A_{\gamma}$.
   for(; cell_s != endc_s; ++cell_s)
     {
       fe_v_s.reinit (cell_s);
@@ -1963,7 +1949,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  fluid_cells[c]->get_dof_indices (dofs_f);
 
 
-// Local FEValues of the fluid
+// Local <code>FEValues</code> of the fluid
 	  Quadrature<dim> local_quad (fluid_qpoints[c]);
 	  FEValues<dim> local_fe_f_v (fe_f,
 				      local_quad,
@@ -1978,56 +1964,38 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  local_up.resize (local_quad.size(), Vector<double>(dim+1));
 	  local_fe_f_v.get_function_values (xi.block(0), local_up);
 
-// ============================================================
-// Equation in V': Here we assemble all of the terms in the
-//                 equation in V' that are defined over B.
-// ------------------------------------------------------------
-// Equation in Q': Here we assemble all of the terms in the
-//                 equation in Q' that are defined over B.
-//                 There are two such terms, both pertaining to
-//                 the solution of the compressible case.
-//                 These terms concern the removal of the
-//                 incompressibility condition over B and the
-//                 construction of a penalty term specifying
-//                 the value of the pressure over B.
-// ------------------------------------------------------------
-// Equation in Y': Here we assemble all of the terms in the
-//                 equation in Y' that involve the velocity u.
-// ============================================================
-// NOTE: Since the FEValues pertaining to the equations in V'
-//       and Q' are grouped together, the terms contributing
-//       to the equations in V' and Q', all of these terms
-//       are assembled in a single cycle over the dofs of the
-//       current fluid cell.
-// ============================================================
+// A bit of nomenclature:
+// <dl>
+// <dt>Equation in $V'$</dt>
+//     <dd> Assemblage of the terms in the equation in $V'$ that
+//          are defined over $B$.</dd>
+
+// <dt>Equation in $Y'$</dt> 
+//     <dd> Assemblage of the terms in the equation in $Y'$ that involve
+//          the velocity $u$. </dd>
+// </dl>
 
 
 
-// ****************************************************
-// Equation in V' and equation in Q'
-// initialization of residual
-// ****************************************************
+
+// Equation in $V'$: initialization of residual.
 	  set_to_zero(local_res);
 	  if(update_jacobian) set_to_zero(local_jacobian);
 
-// ****************************************************
-// Equation in V', Equation in Q'
-// begin cycle over fluid dofs
-// ****************************************************
+// Equation in $V'$: begin cycle over fluid dofs
 	  for(unsigned int i=0; i<fe_f.dofs_per_cell; ++i)
             {
 	      comp_i = fe_f.system_to_component_index(i).first;
 	      if(comp_i < dim)
-// Equation in V'
 		for(unsigned int q=0; q<local_quad.size(); ++q)
 		  {
 
-// Quadrature point on the *mapped* solid (Bt)
+// Quadrature point on the <i>mapped</i> solid ($B_{t}$).
 		    unsigned int &qs = fluid_maps[c][q];
 
 
 // Contribution due to the elastic component of the stress response
-// function in the solid.  P F^{T} . grad_x v
+// function in the solid:  $P_{s}^{e} F^{T} \cdot \nabla_{x} v$.
 		    if((!par.semi_implicit) || (!par.use_spread))
 		      contract (PeFT, Pe[qs], 2, F[qs], 2);
 		    if (!par.use_spread)
@@ -2087,7 +2055,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
             }
 
 
-// Equation in V' add to global residual
+// Equation in $V'$ add to global residual
 	  apply_constraints(local_res,
 			    local_jacobian,
 			    xi.block(0),
@@ -2105,22 +2073,17 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // ****************************************************
-// Equation in V': COMPLETED
-// Equation in Y': NOT YET COMPLETED
+// Equation in $V'$: COMPLETED
+// Equation in $Y'$: NOT YET COMPLETED
 // ****************************************************
 
 
-// ****************************************************
-// Equation in Y'
-// initialization of residual
-// ****************************************************
+// Equation in $Y'$: initialization of residual.
 	  set_to_zero(local_res);
 	  if(update_jacobian) set_to_zero(local_jacobian);
 
 
-// *********************************************************
-// Equation in Y': begin cycle over dofs of immersed domain.
-// *********************************************************
+// Equation in $Y'$: begin cycle over dofs of immersed domain.
 	  for(unsigned int i=0; i<fe_s.dofs_per_cell; ++i)
             {
 	      unsigned int wi = i + fe_f.dofs_per_cell;
@@ -2129,7 +2092,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
                 {
 		  unsigned int &qs = fluid_maps[c][q];
 
-// - u . y
+// $- u(x,t)\big|_{x = s + w(s,t)} \cdot y(s)$.
 		  local_res[wi] -= par.Phi_B
 				   * local_up[q](comp_i)
 				   * fe_v_s.shape_value(i,qs)
@@ -2162,7 +2125,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
             }
 
 
-// Equation in Y': add to global residual
+// Equation in Y': add to global residual.
 	  apply_constraints(local_res,
 			    local_jacobian,
 			    xi.block(0),
@@ -2189,16 +2152,16 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 
-// *************************
-// Equation in V': COMPLETED
-// Equation in Q': COMPLETED
-// Equation in Y': COMPLETED
-// *************************
+// ***************************
+// Equation in $V'$: COMPLETED
+// Equation in $Y'$: COMPLETED
+// ***************************
         }
 
 
-// Equation in Y': Here we assemble all of the terms in the equation
-// in Y' that involve w_dot.
+// Here we assemble the term in the equation
+// in $Y'$ involving $\partial w/\partial t$: this term does not
+// involve any relations concerning the fluid cells.
       set_to_zero(local_res);
       if(update_jacobian) set_to_zero(local_jacobian);
 
@@ -2209,7 +2172,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  for(unsigned int qs=0; qs<nqps; ++qs)
             {
 
-// Wt . Y
+// $(\partial w/\partial t) \cdot y$.
 	      local_res[wi] += par.Phi_B
 			       * local_Wt[qs](comp_i)
 			       * fe_v_s.shape_value(i,qs)
@@ -2244,7 +2207,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 						 fe_f.dofs_per_cell);
 
     }
-// Cycle over the cells of the solid domain: END
+// Cycle over the cells of the solid domain: END.
 
 
 // -----------------------------------------------
@@ -2269,7 +2232,7 @@ ImmersedFEM<dim>::run ()
   previous_time = 0;
 
 
-// The variable "update_Jacobian" is set to true so to have a
+// The variable <code>update_Jacobian</code> is set to true so to have a
 // meaningful first update of the solution.
   bool update_Jacobian = true;
 
@@ -2294,13 +2257,13 @@ ImmersedFEM<dim>::run ()
 
 // We view our system of equations to be of the following form:
 //
-// F(xi', xi, t) = 0, xi(t0) = xi0.
+// $f(\xi', \xi, t) = 0, \quad \xi(0) = \xi_{0}$.
 //
-// Denoting the current time step by n, the vector xi'(t_{n}) is
-// assumed to be a linear combination of xi(t_{i}), with i = n - m
-// ... n, with m <= n. For simplicity, here we implement an implicit
-// Euler method, according to which xi'(t_{n}) = [xi(t_{n}) -
-// xi(t_{n-1})]/dt, where dt is the size of the time step.
+// Denoting the current time step by $n$, the vector $\xi'(t_{n})$ is
+// assumed to be a linear combination of $\xi(t_{i})$, with $i = n - m
+// \ldots n$, with $m \le n$. For simplicity, here we implement an implicit
+// Euler method, according to which $\xi'(t_{n}) = [\xi(t_{n}) -
+// \xi(t_{n-1})]/dt$, where $dt$ is the size of the time step.
 
 
 // Time derivative of the system's state.
@@ -2322,7 +2285,7 @@ ImmersedFEM<dim>::run ()
 	      JF_inv.initialize (JF);
 
 
-// Reset the "update_Jacobian" variable to the value specified
+// Reset the <code>update_Jacobian</code> variable to the value specified
 // in the parameter file.
 	      update_Jacobian = par.update_jacobian_continuously;
             }
@@ -2368,23 +2331,23 @@ ImmersedFEM<dim>::run ()
 		<< endl;
 
 
-// To compute the update to the current xi, we first change the sign
+// To compute the update to the current $\xi$, we first change the sign
 // of the current value of the residual ...
 	      current_res *= -1;
 
 // ... then we compute the update, which is returned by the method
-// "solve" of the object "JF_inv". The latter is of class
-// "SparseDirectUMFPACK" and therefore the value of the (negative) of
+// <code>solve</code> of the object <code>JF_inv</code>. The latter is of class
+// <code>SparseDirectUMFPACK</code> and therefore the value of the (negative) of
 // the current residual must be supplied in a container of type
-// Vector<double>.  So, we first transfer the information in
-// "current_res" into temporary storage, and then we carry out the
+// <code>Vector<double></code>.  So, we first transfer the information in
+// <code>current_res</code> into temporary storage, and then we carry out the
 // computation of the update.
 	      tmp_vec_n_total_dofs = current_res;
 	      JF_inv.solve(tmp_vec_n_total_dofs);
 
-
 // Now that we have the updated of the solution into an object of type
-// Vector<double>, we repackage it into an object of type BlockVector.
+// <code>Vector<double></code>, we repackage it into an object of
+// type <code>BlockVector</code>.
 	      newton_update = tmp_vec_n_total_dofs;
 
 
@@ -2408,7 +2371,7 @@ ImmersedFEM<dim>::run ()
 // convergence is not achieved in 15 iterations update the Jacobian
 // and try again.  The maximum number of 15-iteration cycles is set
 // (arbitrarily) to three. The counter for the cycle is
-// "outer_nonlin_iter".
+// <code>outer_nonlin_iter</code>.
 	  ++nonlin_iter;
 	  if(nonlin_iter == 15)
             {
@@ -2444,7 +2407,7 @@ ImmersedFEM<dim>::run ()
     calculate_error();
 
 }
-// End of "run()"
+// End of <code>run()</code>.
 
 
 // Writes results to the output file.
@@ -2595,7 +2558,7 @@ ImmersedFEM<dim>::output_step
 }
 
 // Determination of a vector of local dofs representing
-//    the field A_gamma.
+//    the field <code>A_gamma</code>.
 
 template <int dim>
 void
@@ -2669,8 +2632,8 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
   bool update_vecF = (vec_F.size()!= 0);
 
 
-// The following variables are used when the CircumferentialFiberModel
-// is used.
+// The following variables are used when the
+// <code>CircumferentialFiberModel</code> is used.
   Point<dim> p;
   Tensor<1, dim, double> etheta;
   Tensor<2, dim, double> etheta_op_etheta;
@@ -2890,7 +2853,7 @@ ImmersedFEM<dim>::distribute_constraint_on_pressure
 }
 
 // Determination of the dofs for the function
-//    M_gamma3_inv_A_gamma.
+//    <code>M_gamma3_inv_A_gamma</code>.
 
 template <int dim>
 void
@@ -3038,7 +3001,8 @@ double ImmersedFEM<dim>::norm(const vector<double> &v)
   return norm = sqrt(norm);
 }
 
-// The main function: essentially the same as in the deal.II examples.
+// The main function: essentially the same as in the
+// <code>deal.II</code> examples.
 int main()
 {
   try
