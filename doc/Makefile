@@ -11,6 +11,7 @@ program2toc := $(dealdoxy)/program2toc
 intro2toc := $(dealdoxy)/intro2toc
 program2doxygen :=  $(dealdoxy)/program2doxygen
 program2plain :=  $(dealdoxy)/program2plain
+program2doxyplain := $(dealdoxy)/program2doxyplain
 create_anchors := $(dealdoxy)/create_anchors
 
 # plain names of those files that we shall treat. simply take all those
