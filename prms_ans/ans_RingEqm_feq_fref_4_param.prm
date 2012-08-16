@@ -1,0 +1,99 @@
+# Listing of Parameters
+# ---------------------
+set All Dirichlet BC                        = true
+set Delta t                                 = 1.e-3                                                    
+set Density                                 = 1
+set Dirichlet BC indicator                  = 0                                                        
+set Elastic modulus                         = 1
+set Final t                                 = 1.2e-3                                                   
+# Select between FE_Q (Lagrange finite element space of continuous, piecewise
+# polynomials) or FE_DGP(Discontinuous finite elements based on Legendre
+# polynomials) to approximate the pressure field
+set Finite element for pressure             = FE_Q                                                     
+set Fix one dof of p                        = false
+set Fluid mesh                              = mesh_ans/fluid_square.inp
+set Fluid refinement                        = 4
+set Force J update at step beginning        = false
+set Interval (of time-steps) between output = 1
+set Output base name                        = ans_results_RingEqm/ans_RingEqm_feq_fref_4
+set Phi_B                                   = 1
+set Semi-implicit scheme                    = true
+# Constitutive models available are: INH_0: incompressible Neo-Hookean with
+# P^{e} = mu (F - F^{-T}); INH_1: incompressible neo-Hookean with P^{e} = mu F -
+# F; CircumferentialFiberModel: incompressible with P^{e} = mu F
+# (e_{\theta} \otimes e_{\theta}) F^{-T}; this is suitable for annular solid
+# comprising inextensible circumferential fibers
+set Solid constitutive model                = CircumferentialFiberModel                                
+set Solid mesh                              = mesh_ans/solid_square.inp
+set Solid refinement                        = 3                                                        
+set Update J cont                           = false
+set Use spread operator                     = true
+set Velocity finite element degree          = 2
+set Viscosity                               = 1
+
+
+subsection Equilibrium Solution of Ring with Circumferential Fibers
+  set Any edge length of the (square) control volume = 1.
+  set Inner radius of the ring                       = 0.25
+  set Width of the ring                              = 0.0625
+  set x-coordinate of the center of the ring         = 0.5
+  set y-coordinate of the center of the ring         = 0.5
+end
+
+
+subsection W0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection force
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection u0
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
+subsection ug
+  # Any constant used inside the function which is not a variable name.
+  set Function constants  = 
+
+  # Separate vector valued expressions by ';' as ',' is used internally by the
+  # function parser.
+  set Function expression = 0; 0; 0
+
+  # The name of the variables as they will be used in the function, separated
+  # by ','.
+  set Variable names      = x,y,t
+end
+
+
