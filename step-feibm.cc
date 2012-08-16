@@ -1,24 +1,25 @@
-// File recommented by recomment.C
-// on Jul 25 2012 at 19:17:18.
+// Copyright (C) 2012 by Luca Heltai (1), 
+// Saswati Roy (2), and Francesco Costanzo (3)
 //
-// Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
 // (1) Scuola Internazionale Superiore di Studi Avanzati
 //     E-mail: luca.heltai@sissa.it
 // (2) Center for Neural Engineering, The Pennsylvania State University
 //     E-Mail: sur164@psu.edu
 // (3) Center for Neural Engineering, The Pennsylvania State University
 //     E-Mail: costanzo@engr.psu.edu
-// Date: July 5, 2012
 //
 // This code was developed starting from the example
 // step-33 of the deal.II FEM library.
 //
-// deal.II step: fluid-structure interaction
+// This file is subject to QPL and may not be  distributed without 
+// copyright and license information. Please refer     
+// to the webpage http://www.dealii.org/ -> License            
+// for the  text  and further information on this license.
+//
 // Keywords: fluid-structure interaction, immersed method,
 //           finite elements, monolithic framework
 //
 // Deal.II version:  deal.II 7.2.pre
-
 
 // @sect3{Include files}
 // We include those elements of the deal.ii library
@@ -100,7 +101,7 @@ class ProblemParameters :
   public ParameterHandler
 {
   public:
-    ProblemParameters();
+    ProblemParameters(int argc, char **argv);
 
 
 // Polynomial degree of the interpolation functions for the velocity
@@ -285,7 +286,7 @@ class ProblemParameters :
 // is created, and the simulation parameters are given default values.
 
 template <int dim>
-ProblemParameters<dim>::ProblemParameters() :
+ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
 		W_0(dim),
 		u_0(dim+1),
 		u_g(dim+1),
@@ -399,8 +400,14 @@ ProblemParameters<dim>::ProblemParameters() :
   this->leave_subsection ();
 
 
-// Specification of the parmeter file.
-  this->read_input ("immersed_fem.prm");
+// Specification of the parmeter file. If no parameter file is
+// specified in input, use the default one, else read each additional
+// argument.
+  if(argc == 1) 
+    this->read_input ("immersed_fem.prm");
+  else
+    for(int i=1; i<argc; ++i)
+      this->read_input(argv[i]);
 
 
 // Reading in the parameters.
@@ -661,7 +668,7 @@ class ImmersedFEM
     Triangulation<dim, dim> tria_s;
 
 
-// <codeFESystem</code>s for the control volume. It consists of two fields:
+// <code>FESystem</code> for the control volume. It consists of two fields:
 // velocity (a vector field of dimension <i>dim</i>) and pressure (a
 // scalar field). The meaning of the parameter <i>dim</i> is as for
 // the <code>Triangulation<dim> tria_f</code> element of the class.
@@ -675,8 +682,7 @@ class ImmersedFEM
     bool dgp_for_p;
 
 
-// This is <code>FESystems</code> for the immersed domain. It consists of a the
-// <code>Triangulation<dim> tria_s</code> element of the class.
+// This is the <code>FESystem</code> for the immersed domain. 
 
     FESystem<dim, dim> fe_s;
 
@@ -3003,11 +3009,11 @@ double ImmersedFEM<dim>::norm(const vector<double> &v)
 
 // The main function: essentially the same as in the
 // <code>deal.II</code> examples.
-int main()
+int main(int argc, char **argv)
 {
   try
     {
-      ProblemParameters<2> par;
+      ProblemParameters<2> par(argc,argv);
       ImmersedFEM<2> test (par);
       test.run ();
     }
