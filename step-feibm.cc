@@ -54,6 +54,7 @@
 #include <grid/tria_iterator.h>
 #include <grid/tria_boundary_lib.h>
 #include <grid/grid_in.h>
+#include<grid/grid_tools.h>
 
 #include <dofs/dof_handler.h>
 #include <dofs/dof_accessor.h>
@@ -256,9 +257,9 @@ class ProblemParameters :
 // List of available consitutive models for the elastic
 // stress of the immersed solid:
 //
-// INH_0: incompressible neo-Hookean with $P_{s}^{e} = \mu F$.
+// INH_0: incompressible neo-Hookean with $P_{s}^{e} = \mu (F - F^{-T})$.
 //
-// INH_1: incompressible neo-Hookean with $P_{s}^{e} = \mu (F - F^{-T})$.
+// INH_1: incompressible neo-Hookean with $P_{s}^{e} = \mu F$.
 //
 // CircumferentialFiberModel:
 // $P_{s}^{e} = \mu F (e_{\theta} \otimes e_{\theta}) F^{-T}$.
@@ -360,9 +361,9 @@ ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
     "INH_0",
     Patterns::Selection ("INH_0|INH_1|CircumferentialFiberModel"),
     "Constitutive models available are: "
-    "INH_0: incompressible Neo-Hookean with P^{e} = mu F; "
-    "INH_1: incompressible neo-Hookean with "
+    "INH_0: incompressible neo-Hookean with "
     "P^{e} = mu (F - F^{-T}); "
+    "INH_1: incompressible Neo-Hookean with P^{e} = mu F; "
     "CircumferentialFiberModel: incompressible with "
     "P^{e} = mu F (e_{\\theta} \\otimes e_{\\theta}) F^{-T}; "
     "this is suitable for annular solid comprising inextensible "
@@ -1482,9 +1483,8 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // In applying the boundary conditions, we set a scaling factor equal
-// to the diameter of the first cell in the triangulation.
-  scaling = dh_f.begin_active()->diameter();
-
+// to the diameter of the smallest cell in the triangulation.
+   scaling = GridTools::minimal_cell_diameter(tria_f);
 
 // Initialization of the residual.
   residual = 0;
@@ -2835,7 +2835,7 @@ ImmersedFEM<dim>::distribute_constraint_on_pressure
   const double average_pressure
 )
 {
-  residual(constraining_dof) += average_pressure*scaling;
+  residual(constraining_dof) += average_pressure*scaling/area;
 }
 
 // Assemble the pressure constraint into the Jacobian.
