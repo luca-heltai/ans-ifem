@@ -959,7 +959,7 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 		  FE_Q<dim>(par.degree),
 		  dim,
 		  *FETools::get_fe_from_name<dim>(par.fe_p_name),
-		  1
+		  par.degree-1
 		),
 		fe_s (FE_Q<dim, dim>(par.degree), dim),
 		dh_f (tria_f),
