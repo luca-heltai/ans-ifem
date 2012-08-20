@@ -15,7 +15,7 @@ set Fluid mesh                              = meshes/fluid_square.inp
 set Fluid refinement                        = 5                                                        
 set Force J update at step beginning        = false
 set Interval (of time-steps) between output = 1
-set Output base name                        = ans_results_RingEqm/ans_RingEqm_dgp_fref_5
+set Output base name                        = out/RingEqm_dgp_fref_5
 set Phi_B                                   = 1
 set Semi-implicit scheme                    = true
 # Constitutive models available are: INH_0: incompressible Neo-Hookean with
