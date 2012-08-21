@@ -2,12 +2,81 @@
 <h1>Results</h1>
 
 <a name="Equilibrium of an immersed ring of a neo-Hookean material"></a>
-<h3> Equilibrium of an immersed ring of a neo-Hookean material </h3>
+<h3> Equilibrium of an Immersed Annulus </h3>
+We report the results obtained by running our code with the parameter file <tt>prms/RingEqm_XXX_fref_Y_param.prm</tt>, where <tt>XXX</tt> is either <tt>dgp</tt> or <tt>feq</tt> and <tt>Y</tt> is 4, 5, 6 or 7, according to the type of pressure finite element and to the fluid refinement level.  The objective of this test is to compute the equilibrium state of an initially undeformed thick annular cylinder submerged in a stationary incompressible fluid that is contained in a rigid prismatic box having a square cross-section. Our simulation is two-dimensional with inner radius $R$ and thickness $w$ and filled with a stationary fluid contained in a square box of edge length $l$ (see figure below).
+<table width="60%" align="center">
+  <tr>
+    <td width="20" align="center">
+@image step-feibm.annulus.png
+    </td>
+  </tr>
+</table>
+The cylinder is located coaxially with respect to that of the box and it is subjected to the hydrostatic pressure of the fluid $p_{i}$ and $p_{o}$ at its inner and outer walls, respectively. Negligible body forces are acting on the system and there is no inflow or outflow of fluid across the walls of the box. Since both the solid as well as the fluid are incompressible it is expected that neither the cylinder nor the fluid will move at all. Therefore, the problem reduces to determining the equilibrium solution for the Lagrange multiplier field $p$. The elastic behavior of the ring is governed by a continuous distribution of concentric fibers lying in the circumferential direction. The constitutive relation for the first Piola-Kirchhoff stress for the ring is then
+@f[
+\hat{P} = -p_{\rm s} F^{-T} + \mu^{e} F \hat{u}_{\Theta} \otimes \hat{u}_{\Theta},
+@f]
+where $\mu^{e}$ is a constant modulus of elasticity, $p_{s}$ is the Lagrange multiplier that enforces incompressibility of the annulus, $F$ is the deformation gradient, $\hat{u}_{\Theta}$ is a unit vector in the circumferential direction in the reference configuration.  Enforcing the balance of linear momentum and boundary conditions, it can be shown that the exct solution to this problem is as follows:
+@f[
+p=
+p_{o}=-\frac{\pi \mu^{e}}{2 l^{2}} [ (R+w)^{2}-R^{2}]
+\quad {\rm for}~R + w \leq r,
+@f]
+@f[
+p= p_{s}=\mu^{e} \ln (\frac{R+w}{r})-\frac{\pi \mu^{e}}{2 l^{2}} [ (R+w)^{2}-R^{2}]\quad{\rm for}~R < r < R+w,
+@f]
+@f[
+p= p_{i}=\mu^{e} \ln (1+\frac{w}{R})-\frac{\pi \mu^{e}}{2 l^{2}} [ (R+w)^{2}-R^{2}]\quad{\rm for}~r \leq R,
+@f]
+In our numerical simulations we have used $R = 0.25\,{\rm m}$, $w=0.06250\,{\rm m}$, $l=1.0\,{\rm m}$ and $\mu^{e}=1\,{\rm Pa}$. For these values, the above exact solution gives $p_{i}=0.16792\,{\rm Pa}$ and $p_{o}=-0.05522\,{\rm Pa}$. In our numerical solution, we have also used $\rho=1.0\,{\rm kg}/{\rm m}^{3}$, dynamic viscosity $\mu=1.0\,{\rm Pa}\!\cdot\!{\rm s}$, and time step size $h=1 \times 10^{-3}\,{\rm s}$. In addition, we have used $Q2$ elements to represent the displacement $w$ of the solid, whereas we have used (i) $Q2/P1$ elements, and (ii) $Q2/Q1$ elements to represent the velocity $v$ and Lagrange multiplier $p$ over the control volume. In the figure below a sample profile of $p$ over the entire control volume and its variation along different values of $y$, after one time step for $Q2/P1$ elements.
+<table width="60%" align="center">
+<caption align="bottom">The values of $p$ after one time step when using $Q2/P1$ elements.</caption>
+<tr>
+<td>@image html step-feibm.pQ2P1m.png</td>
+<td>@image html step-feibm.pQ2P1p.png</td>
+</tr>
+</table>
+In the figure below a sample profile of $p$ over the entire control volume and its variation along different values of $y$, after one time step for $Q2/Q1$ elements.
+<table align="center" class="image">
+<caption align="bottom">The values of $p$ after one time step when using $Q2/Q1$ elements.</caption>
+<tr>
+<td>@image html step-feibm.pQ2Q1m.png</td>
+<td>@image html step-feibm.pQ2Q1p.png</td> 
+</tr>
+</table>
+We assess the convergence property of our numerical scheme by obtaining the convergence rate of the error between the exact and the numerical solutions of this equilibrium problem. The order of the rate of convergence (see the tables below) is $2.5$ for the $L^{2}$ norm of the velocity, 1.5 for the $H^{1}$ norm of the velocity and $1.5$ for the $L^{2}$ norm of the pressure. In all these numerical tests we have used 1856 cells with 15776 DoFs for the solid.
+<table vspace="20" align="center" class="image">
+<caption align="top">Convergence rates as a function of refinement in the control volume (refinement in the immersed domain is kept constant) for the $Q2/P1$ case.</caption>
+<tr>
+<td>@image html step-feibm.pQ2P1c.png</td>
+</tr>
+</table>
+<table vspace="20" align="center" class="image">
+<caption align="top">Convergence rates as a function of refinement in the control volume (refinement in the immersed domain is kept constant) for the $Q2/Q1$ case.</caption>
+<tr>
+<td>@image html step-feibm.pQ2Q1c.png</td>
+</tr>
+</table>
 
-We run the code with the following <code>parameter-file.prm</code>, which can be found in the
-same directory as the source:
-@verbatim
-copy parameters files
-@endverbatim
 
-Discussion of specific elements of the parameter file ... and results.
+<a name="Equilibrium of an immersed ring of a neo-Hookean material"></a>
+<h3> Disk Entrained in a Lid-Driven Cavity Flow </h3>
+We report the results obtained by running our code with the parameter file <tt>LDCFlow_Ball_DGP_INH1_param.prm</tt>.  Referring to the figure below, the disk has a radius $R=0.2\,{\rm m}$ and its center $C$ is initially positioned at $x=0.6\,{\rm m}$ and $y=0.5\,{\rm m}$ in the square cavity whose each edge has the length $l=1.0\,{\rm m}$. Body forces on the system are negligible.  The constitutive model for the immersed solid is as follows:
+@f[
+\hat{P} = -p_{\rm s} I + \mu^{e} F,
+@f]
+where we have used the following parameters: $\rho=1.0\,{\rm kg}/{\rm m}^3$, dynamic viscosity $\mu=0.01\,{\rm Pa}\!\cdot\!{\rm s}$, shear modulus $\mu^{e} = 0.1\,{\rm Pa}$.  The prescribed value of the horizontal velocity is  $U=1.0\,{\rm m}/{\rm s}$. For our numerical simulations we have used $Q2$ elements to represent the displacement $w$ of the disk whereas we have used $Q2/P1$ element for the fluid. The disk is represented using 320 cells with 2626 DoFs and the control volume has 4096 cells and 45570 DoFs. The time step size $h=1 \times 10^{-2}\,{\rm s}$. We consider the time interval $0 < t \leq 8\,{\rm s}$ during which the disk is lifted from its initial position along the left vertical wall, drawn along underneath the lid and finally dragged downwards along the right vertical wall of the cavity. This is shown in the figure below.
+<table align="center" class="image">
+<caption align="bottom">Disk entrained in a lid-driven cavity flow.</caption>
+<tr>
+<td>@image html step-feibm.lidcavity0.png</td>
+<td>@image html step-feibm.lidcavity1.png</td>
+</tr>
+<tr>
+<td>@image html step-feibm.lidcavity2.png</td>
+<td>@image html step-feibm.lidcavity3.png</td>
+</tr>
+<tr>
+<td>@image html step-feibm.lidcavity4.png</td>
+<td>@image html step-feibm.lidcavity5.png</td>
+</tr>
+</table>

@@ -14,11 +14,14 @@ We present the implementation of a solution scheme for fluid-structure interacti
 <p>
 <b>Fluid and Solid Domains.</b>
 Referring to the figure below, $B_{t}$ represents the configuration of a regular body at time $t$.   $B_{t}$ is a (possibly multiply connected) proper subset of a fixed control volume $\Omega$:  $\Omega\setminus B_{t}$ is filled by a fluid and $B_{t}$ is an <i>immersed body</i>.  Following common practice in continuum mechanics, we refer to $B_{t}$ as the <i>current</i> configuration of the immersed body.  By contrast, we denote by $B$ the reference configuration of the immersed body.  We denote the position of points in $B$ by $s$, whereas we denote the position at time $t$ of a point $P$ in $\Omega$ by $x_{P}(t)$.  For the examples in the results section we take $B$ to coincide with the initial configuration $B_{0}$.
-</p>
-<div class="image">
-<img src="../figures/step-feibm.geometry.png" alt="../figures/step-feibm.geometry.png"/>
-</div>
-<p>
+<table width="60%" align="center">
+  <tr>
+    <td ALIGN="center">
+      @image html step-feibm.geometry.png
+    </td>
+  </tr>
+</table>
+
 <b>Motion of the Immersed Body.</b>
 The motion of the solid is described by a function $\chi(s,t)$, which gives the position $x$ at time $t$ of a particle of the immersed domain with position $s$ in the reference configuration $B$, i.e., $x = \chi(s,t)$ for $s \in B$. The deformation gradient is the tensor $F = \nabla_{s} \chi(s,t)$, where $\nabla_{s}$ denotes the gradient operator relative to position in the reference configuration.  We denote the determinant of $F(s,t)$ by $J(s,t)$ and we assume that $J(s,t) > 0$ for all $s \in B$ and $t$.  From a practical viewpoint, as it is often done in solids mechanics, we describe the motion of the body through its displacement function.  We denote the displacement by $w(s,t)$.  The relation between $\chi(s,t)$ and $w$ is as follows:
 @f[
@@ -26,7 +29,7 @@ x = s + w(s,t).
 @f]
 From the above relation we have that $F(s,t) = I + \nabla_{s} w(s,t)$, where $I$ is the identity tensor.
 </p>
-
+ 
 <p>
 <b>Constitutive Equations.</b>
 The fluid is assumed to be Newtonian so that its Cauchy stress is $\sigma_{f} = -p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}]$, where $p$ is the Lagrange multiplier for the enforcement of incompressibility, $\eta$ is the dynamic viscosity, $\nabla_{x}$ is the gradient operator relative to position in the current configuration, and $u$ is the velocity field.  For a Newtonian fluid, $p$ is also the pressure (mean normal stress).  The immersed solid is assumed to be incompressible and viscoelastic, with the viscous response identical to that of the fluid.  The elastic response is assumed to be admit a strain energy $W_{s}^{e}(F)$, which we assumed to be a convex function of the deformation gradient.  Hence the Cauchy stress in the solid is given by $\sigma_{s} = - p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}] + \sigma_{s}^{e}$, with $\sigma_{s}^{e} = J^{-1} P_{s}^{e} F^{-T}$, where $P_{s}^{e} = \partial W_{s}^{e}/\partial F$ is the first Piola-Kirchhoff stress tensor of the solid.
@@ -107,12 +110,13 @@ Referring to the third equation in the weak formulation, let's consider the term
 \Phi_{B} \int_{B} u_{h}(x,t)\big|_{x = s + w_{h}(s,t)}  \cdot y_{h},
 @f]
 where $u_{h}$ denotes the finite element representation of $u$ given by interpolation functions supported over the triangulation $\Omega_{h}$ of $\Omega$, and where $y_{h}$ denotes shape functions supported over the triangulation $B_{h}$ of the domain $B$: the construction of the above term draws information from two independent triangulations.  The above integral is computed by summing contributions from each cell $K$ of $B_{h}$.  Each of these contributions is a sum over the $N_{Q}$ quadrature points.  We illustrate this via the following figure:
-</p>
-</p>
-<div class="image">
-<img src="../figures/step-feibm.integration.png" alt="../figures/step-feibm.integration.png"/>
-</div>
-<p>
+<table width="60%" align="center">
+  <tr>
+    <td ALIGN="center">
+      @image html step-feibm.integration.png
+    </td>
+  </tr>
+</table>
 In our code, for each cell of the immersed body, we start by determining the position of the quadrature points of the element corresponding to the cell at hand.  The position of the quadrature point is determined both relative to the reference unit element and relative to the global coordinate system adopted for the calculation, through the mappings:
 @f[
 s_{K}: \hat{K} := [0,1]^{d} \mapsto K \in B_{h},
