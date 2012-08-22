@@ -2256,7 +2256,10 @@ ImmersedFEM<dim>::run ()
       unsigned int       nonlin_iter = 0;
       unsigned int outer_nonlin_iter = 0;
 
-
+//Impose the Dirichlet boundary conditions pertaining to the current time
+// on the state of the system
+	  apply_current_bc(current_xi,t);
+	   
 // The nonlinear solver iteration cycle begins here.
       while(true)
         {
