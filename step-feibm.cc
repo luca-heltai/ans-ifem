@@ -24,55 +24,54 @@
 // @sect3{Include files}
 // We include those elements of the deal.ii library
 // whose functionality is needed for our purposes.
-#include <base/parameter_handler.h>
-#include <base/point.h>
-#include <base/function.h>
-#include <base/tensor.h>
-#include <base/parsed_function.h>
-#include <base/quadrature_lib.h>
-#include <base/multithread_info.h>
-#include <base/thread_management.h>
-#include <base/work_stream.h>
-#include <base/parallel.h>
-#include <base/utilities.h>
-#include <base/conditional_ostream.h>
+#include <deal.II/base/parameter_handler.h>
+#include <deal.II/base/point.h>
+#include <deal.II/base/function.h>
+#include <deal.II/base/tensor.h>
+#include <deal.II/base/parsed_function.h>
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/multithread_info.h>
+#include <deal.II/base/thread_management.h>
+#include <deal.II/base/work_stream.h>
+#include <deal.II/base/parallel.h>
+#include <deal.II/base/utilities.h>
+#include <deal.II/base/conditional_ostream.h>
 
-#include <lac/vector.h>
-#include <lac/constraint_matrix.h>
-#include <lac/sparse_matrix.h>
-#include <lac/solver_cg.h>
-#include <lac/precondition.h>
-#include <lac/solver_gmres.h>
-#include <lac/sparse_ilu.h>
-#include <lac/sparse_direct.h>
-#include <lac/vector_view.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/constraint_matrix.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/solver_gmres.h>
+#include <deal.II/lac/sparse_ilu.h>
+#include <deal.II/lac/sparse_direct.h>
+#include <deal.II/lac/vector_view.h>
 
-#include <grid/tria.h>
-#include <grid/grid_generator.h>
-#include <grid/grid_refinement.h>
-#include <grid/tria_accessor.h>
-#include <grid/tria_iterator.h>
-#include <grid/tria_boundary_lib.h>
-#include <grid/grid_in.h>
-#include<grid/grid_tools.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/tria_iterator.h>
+#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/grid_in.h>
+#include <deal.II/grid/grid_tools.h>
 
-#include <dofs/dof_handler.h>
-#include <dofs/dof_accessor.h>
-#include <dofs/dof_tools.h>
-#include <dofs/dof_renumbering.h>
-#include <dofs/dof_constraints.h>
+#include <deal.II/dofs/dof_handler.h>
+#include <deal.II/dofs/dof_accessor.h>
+#include <deal.II/dofs/dof_tools.h>
+#include <deal.II/dofs/dof_renumbering.h>
 
-#include <fe/fe_q.h>
-#include <fe/fe_dgp.h>
-#include <fe/fe_values.h>
-#include <fe/fe_tools.h>
-#include <fe/fe_system.h>
-#include <fe/mapping_q_eulerian.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_dgp.h>
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/fe/fe_tools.h>
+#include <deal.II/fe/fe_system.h>
+#include <deal.II/fe/mapping_q_eulerian.h>
 
-#include <numerics/matrices.h>
-#include <numerics/vectors.h>
-#include <numerics/fe_field_function.h>
-#include <numerics/data_out.h>
+#include <deal.II/numerics/vector_tools.h>
+#include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/fe_field_function.h>
+#include <deal.II/numerics/data_out.h>
 
 
 // Elements of the C++ standard library
@@ -339,12 +338,12 @@ ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
   this->declare_entry ("Fix one dof of p", "false", Patterns::Bool());
   this->declare_entry (
     "Solid mesh",
-    "mesh/solid_square.inp",
+    "meshes/solid_square.inp",
     Patterns::Anything()
   );
   this->declare_entry (
     "Fluid mesh",
-    "mesh/fluid_square.inp",
+    "meshes/fluid_square.inp",
     Patterns::Anything()
   );
   this->declare_entry ("Output base name", "out/square", Patterns::Anything());

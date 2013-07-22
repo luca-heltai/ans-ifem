@@ -25,13 +25,16 @@ file for further information on this license.
 1. Deal.II Requirements:
 ============================================================
 
-The FEIBM source code is based on the deal.II 7.1.0 library. 
+The FEIBM source code is based on the deal.II 7.3.0 library. 
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory
 
 DEAL_II_DIR
 
+and that the user has defined the enviroment variable DEAL_II_DIR 
+to point to the correct location. If this enviroment variable is 
+not set, the program will not compile and run properly.
 For the program to work properly, deal.II should be configured at
 least with the flag "--with-umfpack", e.g., by typing
 
@@ -44,16 +47,22 @@ to enable UMFPACK direct solver.
 2. Installation procedure:
 ============================================================
 
-The provided tgz archive should be unzipped under the examples
+The provided tgz archive should be unzipped in a dedicated 
 subdirectory, with the commands
 
-cd DEAL_II_DIR/examples
+cd PATH_WHERE_YOU_WANT_THIS_CODE
 tar xvfz step-feibm.tgz
 
 The program can then be compiled by running
 
-cd DEAL_II_DIR/examples/step-feibm
+cd step-feibm
 make
+
+or 
+
+make run
+
+which will run a trivial test.
 
 ============================================================
 3. Running instructions:
@@ -67,7 +76,7 @@ or
 
 ./step-feibm parameters.prm
 
-in the directory DEAL_II_DIR/examples/step-feibm. 
+in the directory step-feibm.
 The program uses parameter files to set its runtime variables. The
 file 
 
@@ -89,24 +98,33 @@ the paper.
 
 If the user has the program Doxygen installed, a complete and
 browsable documentation of the source code itself can be generated in
-two ways: 
+one of two ways: 
 
-cd DEAL_II_DIR/examples/step-feibm/doc
+1. 
+
+cd step-feibm/doc
 make
 
-or by 
-
-cd DEAL_II_DIR/
-make online-doc
-
-In the first case, the documentation will be accessible at the
+In this case, the documentation will be accessible at the
 address
 
 DEAL_II_DIR/examples/step-feibm/doc/html/index.html
 
-while in the second case, the command will generate the full deal.II
-documentation, together with the documentation of the step-feibm
-source code, which will be accessible at the address
+
+2.
+If the user wants the deal.II documentation to be inlined, then 
+the code should be extracted under the $DEAL_II_DIR/examples 
+directory, i.e., under $DEAL_II_DIR/examples/step-feibm.
+The documentation has been constructed in a way which is compatible
+with the examples structure of the deal.II library. If the code is
+extracted in the examples directory, then by typing
+
+cd DEAL_II_DIR/
+make online-doc
+
+then the entire deal.II documentation, 
+together with the documentation of the step-feibm
+source code, will be accessible at the address
 
 DEAL_II_DIR/doc/doxygen/deal.II/step_feibm.html
 

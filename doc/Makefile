@@ -1,12 +1,20 @@
 # include paths and global variables
-include ../../../common/Make.global_options
+include $(DEAL_II_DIR)/common/Make.global_options
 
-default: tmp/step-feibm.cc tmp/step-feibm.h
+guard-%:
+	if [ "${${*}}" == "" ]; then \
+                echo "Environment variable $* not set"; \
+                exit 1; \
+        fi
+
+default: tmp/step-feibm.cc tmp/step-feibm.h guard-DEAL_II_DIR
+	rm -f filter
+	ln -s $(DEAL_II_DIR)/doc/doxygen/filter .
 	doxygen Doxyfile
 
 
 # Paths of perl utilities
-dealdoxy := ../../../doc/doxygen/tutorial
+dealdoxy := $D/doc/doxygen/tutorial
 program2toc := $(dealdoxy)/program2toc
 intro2toc := $(dealdoxy)/intro2toc
 program2doxygen :=  $(dealdoxy)/program2doxygen
@@ -46,7 +54,7 @@ get_basename = $(shell echo $(1) | $(PERL) -pi -e 's/(tmp\/generated|tmp).//g; s
 
 $(example-toc-prog):
 	@echo ================== Making $@
-	@cat $D/examples/$(call get_basename, $@)/*.cc \
+	@cat ../step-feibm.cc \
 	  | $(PERL) $(program2toc) \
 	  > $@
 
@@ -60,7 +68,7 @@ $(example-toc-plain):
 
 $(example-toc-intro):
 	@echo ================== Making $@
-	@cat $D/examples/$(call get_basename, $@)/doc/intro.dox \
+	@cat intro.dox \
 	  | egrep -i "<h[3456]>.*</h[3456]>" \
 	  | $(PERL) $(intro2toc) \
 	  > $@
@@ -68,7 +76,7 @@ $(example-toc-intro):
 
 $(example-toc-results):
 	@echo ================== Making $@
-	@cat $D/examples/$(call get_basename, $@)/doc/results.dox \
+	@cat doc/results.dox \
 	  | egrep -i "<h[3456]>.*</h[3456]>" \
 	  | $(PERL) $(intro2toc) \
 	  > $@
@@ -92,13 +100,13 @@ $(example-toc):
 
 $(example-dox-prog):
 	@echo ================== Making $@
-	@cat $D/examples/$(call get_basename, $@)/*.cc \
+	@cat ../step-feibm.cc \
 	  | $(PERL) $(program2doxygen) \
 	  > $@
 
 $(example-plain):
 	@echo ================== Making $@
-	@cat $D/examples/$(call get_basename, $(@F))/*cc | $(PERL) $(program2plain) > $@
+	@cat ../step-feibm.cc | $(PERL) $(program2plain) > $@
 
 $(example-dox-plain):
 	@echo ================== Making $@
@@ -107,11 +115,11 @@ $(example-dox-plain):
 	@echo " * " >> $@
 	@echo " * (If you are looking at a locally installed deal.II version, then the" >> $@
 	@echo " * program can be found at <i>" >> $@
-	@echo " * " $D/examples/$(call get_basename,$@)/*.cc | $(PERL) -pi -e 's!/! /!g;' >> $@
+	@echo " * " ../step-feibm.cc | $(PERL) -pi -e 's!/! /!g;' >> $@
 	@echo " * </i>. Otherwise, this is only" >> $@
 	@echo " * the path on some remote server.)" >> $@
 	@echo " @code" >> $@
-	@cat $D/examples/$(call get_basename, $@)/*.cc | $(PERL) $(program2doxyplain) >> $@
+	@cat ../step-feibm.cc | $(PERL) $(program2doxyplain) >> $@
 	@echo " @endcode" >> $@
 
 
@@ -123,11 +131,11 @@ $(example-doxygen):
 	@echo "@htmlonly" >> $@
 	@cat tmp/generated/$(call get_basename, $@)_toc.combined >> $@
 	@echo "@endhtmlonly" >> $@
-	@cat $D/examples/$(call get_basename, $@)/doc/intro.dox \
+	@cat intro.dox \
 		| $(PERL) $(create_anchors) >> $@
 	@echo >> $@
 	@cat tmp/generated/$(call get_basename, $@)_prog.dox >> $@
-	@cat $D/examples/$(call get_basename, $@)/doc/results.dox \
+	@cat results.dox \
 		| $(PERL) $(create_anchors) >> $@
 	@echo >> $@
 	@echo " <a name=\"PlainProg\"></a>" >> $@
@@ -156,30 +164,30 @@ clean:
 .PHONY: validate-xrefs clean
 
 
-Makefile.dep: $(shell echo $D/examples/*/*.cc $D/examples/*/doc/*.dox) Makefile
+Makefile.dep: $(shell echo ../step-feibm.cc *.dox) Makefile
 	@echo ================== Generating $@
 	@for i in $(example-names) ; do \
 		echo tmp/generated/$${i}_prog.html tmp/generated/$${i}_plain.html \
 		     tmp/generated/$${i}_toc.prog \
 		     tmp/generated/$${i}_prog.dox tmp/generated/$${i}_plain.dox : \
-			`echo $D/examples/$${i}/*.cc` ; \
+			`echo ../step-feibm.cc` ; \
 		echo tmp/generated/$${i}_toc.plain : tmp/generated/$${i}_toc.prog ; \
 		echo tmp/generated/$${i}_toc.combined : \
 			tmp/generated/$${i}_toc.intro \
 			tmp/generated/$${i}_toc.results \
 			tmp/generated/$${i}_toc.prog \
 			tmp/generated/$${i}_toc.plain ; \
-		echo tmp/$$i.cc : `echo $D/examples/$${i}/*.cc` ; \
+		echo tmp/$$i.cc : `echo ../step-feibm.cc` ; \
 		echo tmp/$$i.h : tmp/generated/$${i}_prog.dox tmp/generated/$${i}_plain.dox \
 				tmp/generated/$${i}_toc.combined \
-				$D/examples/$$i/doc/intro.dox \
-				$D/examples/$$i/doc/results.dox \
+				intro.dox \
+				results.dox \
 				tmp/$$i.cc ; \
 		echo tmp/generated/$${i}_toc.intro : \
-				$D/examples/$$i/doc/intro.dox \
+				intro.dox \
 			 ; \
 		echo tmp/generated/$${i}_toc.results : \
-				$D/examples/$$i/doc/results.dox \
+				results.dox \
 			 ; \
 	 done \
 	> $@
