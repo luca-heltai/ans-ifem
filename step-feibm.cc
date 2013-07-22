@@ -306,6 +306,8 @@ ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
 
   this->enter_subsection("ug");
   ParsedFunction<dim>::declare_parameters(*this, dim+1);
+  this->declare_entry("Function expression", "if(y>.99, 1, 0); 0; 0",
+	  Patterns::Anything());
   this->leave_subsection();
 
   this->enter_subsection("force");
@@ -320,8 +322,8 @@ ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
     "2",
     Patterns::Integer(2,10)
   );
-  this->declare_entry ("Fluid refinement", "4", Patterns::Integer());
-  this->declare_entry ("Solid refinement", "1", Patterns::Integer());
+  this->declare_entry ("Fluid refinement", "3", Patterns::Integer());
+  this->declare_entry ("Solid refinement", "2", Patterns::Integer());
   this->declare_entry ("Delta t", ".1", Patterns::Double());
   this->declare_entry ("Final t", "1", Patterns::Double());
   this->declare_entry ("Update J cont", "false", Patterns::Bool());
@@ -347,7 +349,7 @@ ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
     Patterns::Anything()
   );
   this->declare_entry ("Output base name", "out/square", Patterns::Anything());
-  this->declare_entry ("Dirichlet BC indicator", "1", Patterns::Integer(0,254));
+  this->declare_entry ("Dirichlet BC indicator", "0", Patterns::Integer(0,254));
   this->declare_entry ("All Dirichlet BC", "true", Patterns::Bool());
   this->declare_entry (
     "Interval (of time-steps) between output",
