@@ -25,7 +25,10 @@ file for further information on this license.
 1. Deal.II Requirements:
 ============================================================
 
-The FEIBM source code is based on the deal.II 7.3.0 library. 
+The FEIBM source code is based on the deal.II 7.3.0 library. It 
+has also been tested with the current svn release deal.II 8.0.pre,
+and a CMakeLists.txt file which will allow you to compile it with
+later deal.II versions has been included.
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory
@@ -63,6 +66,17 @@ or
 make run
 
 which will run a trivial test.
+
+If you want to use later versions of deal.II, you can use
+the CMakeLists.txt file in the extracted directory to compile
+using the cmake system:
+
+cmake .
+make 
+
+or 
+
+make run
 
 ============================================================
 3. Running instructions:
