@@ -30,20 +30,12 @@
 #include <deal.II/base/tensor.h>
 #include <deal.II/base/parsed_function.h>
 #include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/multithread_info.h>
-#include <deal.II/base/thread_management.h>
-#include <deal.II/base/work_stream.h>
-#include <deal.II/base/parallel.h>
 #include <deal.II/base/utilities.h>
 #include <deal.II/base/conditional_ostream.h>
 
 #include <deal.II/lac/vector.h>
-#include <deal.II/lac/constraint_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
-#include <deal.II/lac/solver_gmres.h>
-#include <deal.II/lac/sparse_ilu.h>
 #include <deal.II/lac/sparse_direct.h>
 #include <deal.II/lac/vector_view.h>
 
@@ -721,16 +713,6 @@ class ImmersedFEM
     QIterated<dim> quad_s;
 
 
-// Constraints matrix for the control volume.
-
-    ConstraintMatrix constraints_f;
-
-
-// Constraints matrix for the immersed domain.
-
-    ConstraintMatrix constraints_s;
-
-
 // Sparsity pattern.
 
     BlockSparsityPattern sparsity;
@@ -801,10 +783,6 @@ class ImmersedFEM
 
 // Scalar used for conditioning purposes.
     double scaling;
-
-
-// Variable to keep track of the previous time.
-    double previous_time;
 
 
 // The first dof of the pressure field.
@@ -1029,12 +1007,9 @@ ImmersedFEM<dim>::apply_current_bc
   compute_current_bc(t);
   map<unsigned int, double>::iterator it    = par.boundary_values.begin(),
 				      itend = par.boundary_values.end();
-  if(vec.size() != 0)
-    for(; it != itend; ++it)
-      vec.block(0)(it->first) = it->second;
-  else
-    for(; it != itend; ++it)
-      constraints_f.set_inhomogeneity(it->first, it->second);
+
+  for(; it != itend; ++it) vec.block(0)(it->first) = it->second;
+
 }
 
 
@@ -1045,9 +1020,7 @@ ImmersedFEM<dim>::apply_current_bc
 // format. The naming convention is as follows:
 // <code>fluid_[dim]d.inp</code> for the control volume and
 // <code>solid_[dim]d.inp</code> for the immersed domain. This function also
-// sets up the constraint matrices for the enforcement of Dirichlet
-// boundary conditions. In addition, it sets up the framework for
-// enforcing the initial conditions.
+// sets up the framework for enforcing the initial conditions.
 
 template <int dim>
 void
@@ -1193,44 +1166,15 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   tmp_vec_n_total_dofs.reinit(n_total_dofs);
   tmp_vec_n_dofs_up.reinit(n_dofs_up);
 
-// We now deal with contraint matrices.
-  {
-    constraints_f.clear ();
-    constraints_s.clear ();
-
-// Enforce hanging node constraints.
-    DoFTools::make_hanging_node_constraints (dh_f, constraints_f);
-    DoFTools::make_hanging_node_constraints (dh_s, constraints_s);
-
-
-// To solve the problem we first assemble the Jacobian of the residual
-// using zero boundary values for the velocity. The specification of
-// the actual boundary values is done later by the <code>apply_current_bc</code>
-// function.
-    VectorTools::interpolate_boundary_values (
-      StaticMappingQ1<dim>::mapping,
-      dh_f,
-      par.zero_boundary_map,
-      constraints_f,
-      par.component_mask);
-  }
-
-
 // Determine the area (in 2D) of the control volume and find the first
 // dof pertaining to the pressure.
   get_area_and_first_pressure_dof ();
-
-  constraints_f.close ();
-  constraints_s.close ();
-
 
 // The following matrix plays no part in the formulation. It is
 // defined here only to use the VectorTools::project function in
 // initializing the vectors previous_xi.block(0) and unit_pressure.
   ConstraintMatrix cc;
   cc.close();
-
-
 
 // Construction of the initial conditions.
   if(fe_f.has_support_points())
@@ -1309,9 +1253,8 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
     DoFTools::make_sparsity_pattern (dh_f,
 				     coupling,
-				     csp.block(0,0),
-				     constraints_f,
-				     true);
+				     csp.block(0,0));
+
     DoFTools::make_sparsity_pattern (dh_s, csp.block(1,1));
 
     sparsity.copy_from (csp);
@@ -1468,11 +1411,6 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // coincides with the position of the body at the previous time step.
   if(par.semi_implicit == true)
     {
-      if(fabs(previous_time - t) > 1e-12)
-        {
-	  previous_time = t;
-	  previous_xi = xi;
-        }
       mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
 								previous_xi.block(1),
 								dh_s);
@@ -2236,7 +2174,6 @@ ImmersedFEM<dim>::run ()
 
 // Initialization of the current state of the system.
   current_xi = previous_xi;
-  previous_time = 0;
 
 
 // The variable <code>update_Jacobian</code> is set to true so to have a
@@ -2257,7 +2194,7 @@ ImmersedFEM<dim>::run ()
       unsigned int       nonlin_iter = 0;
       unsigned int outer_nonlin_iter = 0;
 
-//Impose the Dirichlet boundary conditions pertaining to the current time
+// Impose the Dirichlet boundary conditions pertaining to the current time
 // on the state of the system
 	  apply_current_bc(current_xi,t);
 	   
