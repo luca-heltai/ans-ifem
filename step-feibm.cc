@@ -1,4 +1,4 @@
-// Copyright (C) 2012 by Luca Heltai (1), 
+// Copyright (C) 2014 by Luca Heltai (1), 
 // Saswati Roy (2), and Francesco Costanzo (3)
 //
 // (1) Scuola Internazionale Superiore di Studi Avanzati
