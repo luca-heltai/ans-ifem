@@ -1,0 +1,15 @@
+#temporary cmake files
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+#executable file and parameters
+ifem
+immersed_fem.prm
+
+#all output files
+*.vtu
+*.vtk
+*.gpl
