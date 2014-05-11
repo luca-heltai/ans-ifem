@@ -260,8 +260,8 @@ where we have used the following parameters: \f$\rho=1.0\,{\rm kg}/{\rm m}^3\f$,
 
 using namespace std;
 
-// The main function: essentially the same as in the
-// <code>deal.II</code> examples.
+//! The main function: essentially the same as in the
+//! <code>deal.II</code> examples.
 int main(int argc, char **argv)
 {
   try
