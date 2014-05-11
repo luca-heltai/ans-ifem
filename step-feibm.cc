@@ -11,7 +11,7 @@
 // This code was developed starting from the example
 // step-33 of the deal.II FEM library.
 //
-// This file is subject to QPL and may not be  distributed without 
+// This file is subject to LGPL and may not be  distributed without 
 // copyright and license information. Please refer     
 // to the webpage http://www.dealii.org/ -> License            
 // for the  text  and further information on this license.
@@ -19,7 +19,7 @@
 // Keywords: fluid-structure interaction, immersed method,
 //           finite elements, monolithic framework
 //
-// Deal.II version:  deal.II 7.2.pre
+// Deal.II version:  deal.II 8.2.pre
 
 // @sect3{Include files}
 // We include those elements of the deal.ii library
@@ -938,7 +938,7 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 		  FE_Q<dim>(par.degree),
 		  dim,
 		  *FETools::get_fe_from_name<dim>(par.fe_p_name),
-		  par.degree-1
+		  1
 		),
 		fe_s (FE_Q<dim, dim>(par.degree), dim),
 		dh_f (tria_f),
@@ -968,7 +968,8 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 template <int dim>
 ImmersedFEM<dim>::~ImmersedFEM ()
 {
-  delete mapping;
+  if(mapping)
+    delete mapping;
   global_info_file.close();
 }
 
@@ -1211,13 +1212,12 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   {
 
     BlockCompressedSimpleSparsityPattern csp (2,2);
-
+    
     csp.block(0,0).reinit (n_dofs_up, n_dofs_up);
     csp.block(0,1).reinit (n_dofs_up, n_dofs_W );
     csp.block(1,0).reinit (n_dofs_W , n_dofs_up);
     csp.block(1,1).reinit (n_dofs_W , n_dofs_W );
-
-
+    
 // As stated in the documentation, now we <i>must</i> call the function
 // <code>csp.collect_sizes.()</code> since have changed the size
 // of the sub-objects of the object <code>csp</code>.
