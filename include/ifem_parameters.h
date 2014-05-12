@@ -40,7 +40,7 @@ class IFEMParameters :
 
 //! Polynomial degree of the interpolation functions for the velocity
 //! of the fluid and the displacement of the solid. This parameters
-//! must be greater than one.
+//! must be greater than one for the problem to be stable. 
 
     unsigned int degree;
 
@@ -50,7 +50,7 @@ class IFEMParameters :
     double rho;
 
 
-//! Dynamic viscosity of the fluid and the immersed solid.
+//! Dynamic viscosity of the fluid and of the immersed solid.
 
     double eta;
 
@@ -97,12 +97,12 @@ class IFEMParameters :
     ParsedFunction<dim> force;
 
 
-//! Mesh refinement level of the control volume.
+//! Mesh refinement level of the fluid control volume.
 
     unsigned int ref_f;
 
 
-//! Mesh refinement level for the immersed domain.
+//! Mesh refinement level for the immersed solid domain.
 
     unsigned int ref_s;
 
@@ -138,20 +138,30 @@ class IFEMParameters :
     bool update_jacobian_continuously;
 
 
-//! Flag to indicate whether or not the time integration scheme must be
-//! semi-implicit.
+//! Flag to indicate whether or not the time integration scheme must
+//! be semi-implicit. If the time integration is semi_implicit, the
+//! non linearity of the problem is reduced, because the immersed
+//! structure is evaluated at the previous time step, and maintained
+//! constant during the entire Newton iteration on the non-linear
+//! parts of the Navier-Stokes equation.
 
     bool semi_implicit;
 
 
 //! Flag to indicate how to deal with the non-uniqueness of the
-//! pressure field.
+//! pressure field. This flag is only used when the boundary
+//! conditions on the velocity are all of Dirichlet type
 
     bool fix_pressure;
 
 
-//! Flag to indicate whether homogeneous Dirichlet boundary conditions
-//! are applied.
+//! Flag to indicate whether only Dirichlet boundary conditions are
+//! applied on the velocity field. In this case the pressure is known
+//! only up to a constant, and we can decide how to resolve the non
+//! uniqueness of the solution by either fixing one degree of freedom
+//! of the pressure (setting @fix_pressure to true), or by filtering
+//! the constant modes of the pressure (the default behaviour if
+//! @fix_pressure is false).
 
     bool all_DBC;
 
@@ -172,12 +182,16 @@ class IFEMParameters :
     string fluid_mesh;
 
 
-//! Name of the output file.
+//! Base name of the output files. To this file name, a number
+//! identifying the time step is added during the output procedure,
+//! together with the appropriate extension (vtu, for binary vtk files). 
 
     string output_name;
 
 
-//! The interval of timesteps between storage of output.
+//! The interval of timesteps between storage of output. If the time
+//! step is very small, then it might be desirable not to generate the
+//! output files at each time interval. 
 
     int output_interval;
 

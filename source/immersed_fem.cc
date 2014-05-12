@@ -574,21 +574,21 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // Since we want to solve a system of equations of the form
-// $f(\xi', \xi, t) = 0$,
-// we need to manage the information in $\xi'$ as though it were
-// independent of the information in $\xi$. We do so by defining a
+// \f$f(\xi', \xi, t) = 0\f$,
+// we need to manage the information in \f$\xi'\f$ as though it were
+// independent of the information in \f$\xi\f$. We do so by defining a
 // vector of local degrees of freedom that has a length equal
 // to twice the total number of local degrees of freedom.
 // This information is stored in the vector <code>local_x</code>.
 // <ul>
 // <li> The first <code>fe_f.dofs_per_cell</code> elements of
-//      <code>local_x</code> contain the elements of $\xi'$
+//      <code>local_x</code> contain the elements of \f$\xi'\f$
 //      corresponding to the current fluid cell.
 // <li> The subsequent <code>fe_s.dofs_per_cell</code> elements of
-//      <code>local_x</code> contain the elements of $\xi'$ corresponding to the
+//      <code>local_x</code> contain the elements of \f$\xi'\f$ corresponding to the
 //      current solid cell.
 // <li> The subsequent <code>fe_f.dofs_per_cell</code> elements of
-//      <code>local_x</code> contain the elements of $\xi$ corresponding to the
+//      <code>local_x</code> contain the elements of \f$\xi\f$ corresponding to the
 //      current fluid cell.
 // <li> The subsequent <code>fe_s.dofs_per_cell</code> elements of
 //      <code>local_x</code>.
@@ -617,7 +617,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // We now determine the contribution to the residual due to the
 // fluid.  This is the standard Navier-Stokes component of the
 // problem.  As such, the contributions are to the equation in
-// $V'$ and to the equation in $Q'$.
+// \f$V'\f$ and to the equation in \f$Q'\f$.
 
 
 // These iterators point to the first and last active cell of
@@ -675,12 +675,12 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  for(unsigned int q=0; q< nqpf; ++q)
 
 // -------------------------------------
-// Contribution to the equation in $V'$.
+// Contribution to the equation in \f$V'\f$.
 // -------------------------------------
 	    if(comp_i < dim)
 	      {
 
-// $\rho [(\partial u/\partial t) - b ) \cdot v - p (\nabla \cdot v)$
+// \f$\rho [(\partial u/\partial t) - b ) \cdot v - p (\nabla \cdot v)\f$
 		local_res[i] += par.rho
 				* ( local_upt[q](comp_i)
 				    -   local_force[q](comp_i) )
@@ -707,7 +707,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 		      }
 		  }
 
-// $\eta [\nabla_{x} u + (\nabla_{x} u)^{T}] \cdot \nabla v + \rho (\nabla_{x} u) \cdot v$.
+// \f$\eta [\nabla_{x} u + (\nabla_{x} u)^{T}] \cdot \nabla v + \rho (\nabla_{x} u) \cdot v\f$.
 		for(unsigned int d=0; d<dim; ++d)
 		  {
 		    local_res[i] += par.eta
@@ -758,7 +758,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // Contribution to the equation in Q'.
 // ------------------------------------
 
-// $-q (\nabla_{x} \cdot u)$
+// \f$-q (\nabla_{x} \cdot u)\f$
 		for(unsigned int d=0; d<dim; ++d)
 		  local_res[i] -= local_grad_up[q][d][d]
 				  * fe_f_v.shape_value(i,q)
@@ -847,10 +847,10 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // domain contribute to all three of the equations forming the
 // problem.  We group the operators in question by equation.
 // Specifically, we first deal with the terms that contribute to the
-// equation in $V'$, then we deal with the terms that contribute to $Q'$,
-// and finally we deal with the terms that contribute to $Y'$.
+// equation in \f$V'\f$, then we deal with the terms that contribute to \f$Q'\f$,
+// and finally we deal with the terms that contribute to \f$Y'\f$.
 // </ol>
-// <b>Note:</b> In the equation in $Y'$ there is contribution that does
+// <b>Note:</b> In the equation in \f$Y'\f$ there is contribution that does
 // not arise from the interaction of solid and fluid.
 
 
@@ -872,14 +872,14 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 // Local storage of the
 // <ul>
-//  <li> velocity in the solid ($\partial w/\partial t$): <code>local_Wt</code>;
-//  <li> displacement in the solid ($w$): <code>local_W</code>;
+//  <li> velocity in the solid (\f$\partial w/\partial t\f$): <code>local_Wt</code>;
+//  <li> displacement in the solid (\f$w\f$): <code>local_W</code>;
 //  <li> first Piola-Kirchhoff stress: <code>Pe</code>;
-//  <li> deformation gradient ($F$): <code>F</code>;
-//  <li> $P_{s}^{e} F^{T}$, which is the work conjugate of the velocity
+//  <li> deformation gradient (\f$F\f$): <code>F</code>;
+//  <li> \f$P_{s}^{e} F^{T}\f$, which is the work conjugate of the velocity
 //       gradient when measured over the deformed configuration:
 //       <code>PeFT</code>;
-//  <li> Frechet derivative of $P_{s}^{e} F^{T}$ with respect to degrees of
+//  <li> Frechet derivative of \f$P_{s}^{e} F^{T}\f$ with respect to degrees of
 //    freedom in a solid cell: <code>DPeFT_dxi</code>.
 // </ul>
   vector<Vector<double> > local_Wt(nqps, Vector<double>(dim));
@@ -899,8 +899,8 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // domain.
   A_gamma = 0.0;
 
-// Definition of the local contributions to $A_{\gamma}$ and the product of
-// the inverse of the mass matrix of the immersed domain with $A_{\gamma}$.
+// Definition of the local contributions to \f$A_{\gamma}\f$ and the product of
+// the inverse of the mass matrix of the immersed domain with \f$A_{\gamma}\f$.
   Vector<double> local_A_gamma (fe_s.dofs_per_cell);
   Vector<double> local_M_gamma3_inv_A_gamma (fe_s.dofs_per_cell);
 
@@ -929,8 +929,8 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
     endc_s = dh_s.end();
 
 
-// Now we cycle over the cells of the solid domain to evaluate $A_{\gamma}$
-// and $M_{\gamma 3}^{-1} A_{\gamma}$.
+// Now we cycle over the cells of the solid domain to evaluate \f$A_{\gamma}\f$
+// and \f$M_{\gamma 3}^{-1} A_{\gamma}\f$.
   for(; cell_s != endc_s; ++cell_s)
     {
       fe_v_s.reinit (cell_s);
@@ -1003,23 +1003,23 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 // A bit of nomenclature:
 // <dl>
-// <dt>Equation in $V'$</dt>
-//     <dd> Assemblage of the terms in the equation in $V'$ that
-//          are defined over $B$.</dd>
+// <dt>Equation in \f$V'\f$</dt>
+//     <dd> Assemblage of the terms in the equation in \f$V'\f$ that
+//          are defined over \f$B\f$.</dd>
 
-// <dt>Equation in $Y'$</dt> 
-//     <dd> Assemblage of the terms in the equation in $Y'$ that involve
-//          the velocity $u$. </dd>
+// <dt>Equation in \f$Y'\f$</dt> 
+//     <dd> Assemblage of the terms in the equation in \f$Y'\f$ that involve
+//          the velocity \f$u\f$. </dd>
 // </dl>
 
 
 
 
-// Equation in $V'$: initialization of residual.
+// Equation in \f$V'\f$: initialization of residual.
 	  set_to_zero(local_res);
 	  if(update_jacobian) set_to_zero(local_jacobian);
 
-// Equation in $V'$: begin cycle over fluid dofs
+// Equation in \f$V'\f$: begin cycle over fluid dofs
 	  for(unsigned int i=0; i<fe_f.dofs_per_cell; ++i)
             {
 	      comp_i = fe_f.system_to_component_index(i).first;
@@ -1027,12 +1027,12 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 		for(unsigned int q=0; q<local_quad.size(); ++q)
 		  {
 
-// Quadrature point on the <i>mapped</i> solid ($B_{t}$).
+// Quadrature point on the <i>mapped</i> solid (\f$B_{t}\f$).
 		    unsigned int &qs = fluid_maps[c][q];
 
 
 // Contribution due to the elastic component of the stress response
-// function in the solid:  $P_{s}^{e} F^{T} \cdot \nabla_{x} v$.
+// function in the solid:  \f$P_{s}^{e} F^{T} \cdot \nabla_{x} v\f$.
 		    if((!par.semi_implicit) || (!par.use_spread))
 		      contract (PeFT, Pe[qs], 2, F[qs], 2);
 		    if (!par.use_spread)
@@ -1092,7 +1092,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
             }
 
 
-// Equation in $V'$ add to global residual
+// Equation in \f$V'\f$ add to global residual
 	  apply_constraints(local_res,
 			    local_jacobian,
 			    xi.block(0),
@@ -1110,17 +1110,17 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // ****************************************************
-// Equation in $V'$: COMPLETED
-// Equation in $Y'$: NOT YET COMPLETED
+// Equation in \f$V'\f$: COMPLETED
+// Equation in \f$Y'\f$: NOT YET COMPLETED
 // ****************************************************
 
 
-// Equation in $Y'$: initialization of residual.
+// Equation in \f$Y'\f$: initialization of residual.
 	  set_to_zero(local_res);
 	  if(update_jacobian) set_to_zero(local_jacobian);
 
 
-// Equation in $Y'$: begin cycle over dofs of immersed domain.
+// Equation in \f$Y'\f$: begin cycle over dofs of immersed domain.
 	  for(unsigned int i=0; i<fe_s.dofs_per_cell; ++i)
             {
 	      unsigned int wi = i + fe_f.dofs_per_cell;
@@ -1129,7 +1129,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
                 {
 		  unsigned int &qs = fluid_maps[c][q];
 
-// $- u(x,t)\big|_{x = s + w(s,t)} \cdot y(s)$.
+// \f$- u(x,t)\big|_{x = s + w(s,t)} \cdot y(s)\f$.
 		  local_res[wi] -= par.Phi_B
 				   * local_up[q](comp_i)
 				   * fe_v_s.shape_value(i,qs)
@@ -1190,14 +1190,14 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 
 
 // ***************************
-// Equation in $V'$: COMPLETED
-// Equation in $Y'$: COMPLETED
+// Equation in \f$V'\f$: COMPLETED
+// Equation in \f$Y'\f$: COMPLETED
 // ***************************
         }
 
 
 // Here we assemble the term in the equation
-// in $Y'$ involving $\partial w/\partial t$: this term does not
+// in \f$Y'\f$ involving \f$\partial w/\partial t\f$: this term does not
 // involve any relations concerning the fluid cells.
       set_to_zero(local_res);
       if(update_jacobian) set_to_zero(local_jacobian);
@@ -1209,7 +1209,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 	  for(unsigned int qs=0; qs<nqps; ++qs)
             {
 
-// $(\partial w/\partial t) \cdot y$.
+// \f$(\partial w/\partial t) \cdot y\f$.
 	      local_res[wi] += par.Phi_B
 			       * local_Wt[qs](comp_i)
 			       * fe_v_s.shape_value(i,qs)
@@ -1296,13 +1296,13 @@ ImmersedFEM<dim>::run ()
 
 // We view our system of equations to be of the following form:
 //
-// $f(\xi', \xi, t) = 0, \quad \xi(0) = \xi_{0}$.
+// \f$f(\xi', \xi, t) = 0, \quad \xi(0) = \xi_{0}\f$.
 //
-// Denoting the current time step by $n$, the vector $\xi'(t_{n})$ is
-// assumed to be a linear combination of $\xi(t_{i})$, with $i = n - m
-// \ldots n$, with $m \le n$. For simplicity, here we implement an implicit
-// Euler method, according to which $\xi'(t_{n}) = [\xi(t_{n}) -
-// \xi(t_{n-1})]/dt$, where $dt$ is the size of the time step.
+// Denoting the current time step by \f$n\f$, the vector \f$\xi'(t_{n})\f$ is
+// assumed to be a linear combination of \f$\xi(t_{i})\f$, with \f$i = n - m
+// \ldots n\f$, with \f$m \le n\f$. For simplicity, here we implement an implicit
+// Euler method, according to which \f$\xi'(t_{n}) = [\xi(t_{n}) -
+// \xi(t_{n-1})]/dt\f$, where \f$dt\f$ is the size of the time step.
 
 
 // Time derivative of the system's state.
@@ -1370,7 +1370,7 @@ ImmersedFEM<dim>::run ()
 		<< endl;
 
 
-// To compute the update to the current $\xi$, we first change the sign
+// To compute the update to the current \f$\xi\f$, we first change the sign
 // of the current value of the residual ...
 	      current_res *= -1;
 

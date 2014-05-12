@@ -5,10 +5,13 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 Doxyfile
+deal.tag
+TAGS
 
-#executable file and parameters
+#executable file, parameters, and output directory.
 ifem
 immersed_fem.prm
+out
 
 #all output files
 *.vtu

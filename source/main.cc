@@ -178,7 +178,7 @@ We report the results obtained by running our code with the parameter file <tt>p
 <table width="60%" align="center">
   <tr>
     <td width="20" align="center">
-@image step-feibm.annulus.png
+@image html step-feibm.annulus.png
     </td>
   </tr>
 </table>

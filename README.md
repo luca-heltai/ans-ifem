@@ -1,10 +1,10 @@
 ============================================================
 ============================================================
-FEIBM source code
+IFEM source code
 ============================================================
 ============================================================
 
-Copyright (C) 2012 by 
+Copyright (C) 2014 by 
 Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
 
 (1) Scuola Internazionale Superiore di Studi Avanzati
@@ -17,34 +17,29 @@ Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
 This code was developed starting from the example
 step-33 of the deal.II FEM library.
 
-This file is subject to QPL and may not be distributed without
-copyright and license information. Please refer to section 5 of this
-file for further information on this license.
+This file is subject to LGPL version LGPL 2.1 or later and may not be
+distributed without copyright and license information. Please refer to
+section 5 of this file for further information on this license.
 
 ============================================================
 1. Deal.II Requirements:
 ============================================================
 
-The FEIBM source code is based on the deal.II 7.3.0 library. It 
-has also been tested with the current svn release deal.II 8.0.pre,
-and a CMakeLists.txt file which will allow you to compile it with
-later deal.II versions has been included.
+The FEIBM source code requires the deal.II 8.0 library or greater. It
+has also been tested with the current svn release deal.II 8.2.pre, and
+a CMakeLists.txt file which will allow you to compile it with later
+deal.II versions has been included.
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory
 
 DEAL_II_DIR
 
-and that the user has defined the enviroment variable DEAL_II_DIR 
-to point to the correct location. If this enviroment variable is 
-not set, the program will not compile and run properly.
-For the program to work properly, deal.II should be configured at
-least with the flag "--with-umfpack", e.g., by typing
-
-./configure --with-umfpack
-make all
-
-to enable UMFPACK direct solver.
+and that the user has defined the enviroment variable DEAL_II_DIR to
+point to the correct location. If this enviroment variable is not set,
+the user should specify it by hand when running cmake in order for
+cmake to properly locate the deal.II library. For the program to work
+properly, deal.II should be configured with support for UMFPACK.
   
 ============================================================
 2. Installation procedure:
@@ -54,29 +49,13 @@ The provided tgz archive should be unzipped in a dedicated
 subdirectory, with the commands
 
 cd PATH_WHERE_YOU_WANT_THIS_CODE
-tar xvfz step-feibm.tgz
+tar xvfz ans-ifem-v1.0.tgz
 
 The program can then be compiled by running
 
-cd step-feibm
+cd ans-ifem
+cmake -DDEAL_II_DIR=/path/to/deal.II .
 make
-
-or 
-
-make run
-
-which will run a trivial test.
-
-If you want to use later versions of deal.II, you can use
-the CMakeLists.txt file in the extracted directory to compile
-using the cmake system:
-
-cmake .
-make 
-
-or 
-
-make run
 
 ============================================================
 3. Running instructions:
@@ -84,13 +63,13 @@ make run
 
 Once the program has been compiled, it can be run by typing 
 
-./step-feibm
+./ifem
 
 or 
 
-./step-feibm parameters.prm
+./ifem parameters.prm
 
-in the directory step-feibm.
+in the directory ans-ifem.
 The program uses parameter files to set its runtime variables. The
 file 
 

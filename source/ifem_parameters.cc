@@ -34,8 +34,11 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
 		component_mask(dim+1, true)
 {
 
-// Declaration of parameters for the ParsedFunction objects
-// in the class.
+// Declaration of parameters for the ParsedFunction objects in the
+// class. The default behaviour of the program is to simulate a lid
+// driven cavity problem in a square domain, with an immersed smaller
+// square.
+
   this->enter_subsection("W0");
   ParsedFunction<dim>::declare_parameters(*this, dim);
   this->leave_subsection();
@@ -46,7 +49,7 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
 
   this->enter_subsection("ug");
   ParsedFunction<dim>::declare_parameters(*this, dim+1);
-  this->declare_entry("Function expression", "if(y>.99, 1, 0); 0; 0",
+  this->declare_entry("Function expression", "if(y>0.99, 1, 0); 0; 0",
 	  Patterns::Anything());
   this->leave_subsection();
 
