@@ -1,8 +1,5 @@
-============================================================
-============================================================
 IFEM source code
-============================================================
-============================================================
+================
 
 Copyright (C) 2014 by 
 Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
@@ -21,9 +18,8 @@ This file is subject to LGPL version LGPL 2.1 or later and may not be
 distributed without copyright and license information. Please refer to
 section 5 of this file for further information on this license.
 
-============================================================
 1. Deal.II Requirements:
-============================================================
+========================
 
 The FEIBM source code requires the deal.II 8.0 library or greater. It
 has also been tested with the current svn release deal.II 8.2.pre, and
@@ -41,9 +37,8 @@ the user should specify it by hand when running cmake in order for
 cmake to properly locate the deal.II library. For the program to work
 properly, deal.II should be configured with support for UMFPACK.
   
-============================================================
 2. Installation procedure:
-============================================================
+==========================
 
 The provided tgz archive should be unzipped in a dedicated 
 subdirectory, with the commands
@@ -51,15 +46,18 @@ subdirectory, with the commands
 cd PATH_WHERE_YOU_WANT_THIS_CODE
 tar xvfz ans-ifem-v1.0.tgz
 
+or 
+
+git clone https://bitbucket.org/heltai/ans-immersed-finite-element-method ans-ifem
+
 The program can then be compiled by running
 
 cd ans-ifem
 cmake -DDEAL_II_DIR=/path/to/deal.II .
 make
 
-============================================================
 3. Running instructions:
-============================================================
+========================
 
 Once the program has been compiled, it can be run by typing 
 
@@ -85,9 +83,8 @@ prms/
 contains all parameter files used to produce the results presented in
 the paper.
 
-============================================================
 4. Extensive documentation:
-============================================================
+===========================
 
 If the user has the program Doxygen installed, a complete and
 browsable documentation of the source code itself can be generated in
@@ -126,9 +123,8 @@ generated thus has the added benefits of being fully integrated with
 the |deal.II| documentation as well as having hyperlinks to all
 the |deal.II| classes that have been used in our program.
 
-============================================================
 5. Licence Informations
-============================================================
+=======================
 
 The step-feibm library has been placed under an Open Source license,
 in the sense advocated by the Open Source Initiative. 
