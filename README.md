@@ -48,7 +48,7 @@ subdirectory, with the commands
 	
 or cloned using git
 
-	git clone https://bitbucket.org/heltai/ans-immersed-finite-element-method ans-ifem
+	git clone https://bitbucket.org/heltai/ans-ifem
 
 The program can then be compiled by running
 
