@@ -12,7 +12,9 @@ Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
     E-Mail: costanzo@engr.psu.edu
 
 This code was developed starting from the example
-step-33 of the deal.II FEM library.
+step-33 of the deal.II FEM library, and it is the companion code to
+the article http://arxiv.org/abs/1209.2811, submitted to 
+Archive of Numerical Software.
 
 This file is subject to LGPL version 2.1 or later and may not be
 distributed without copyright and license information. Please refer to
@@ -123,7 +125,7 @@ option) any later version.
 
 6. Full Licence Text
 --------------------
-NU LESSER GENERAL PUBLIC LICENSE
+GNU LESSER GENERAL PUBLIC LICENSE
                            Version 2.1, February 1999
 
      Copyright (C) 1991, 1999 Free Software Foundation, Inc.
