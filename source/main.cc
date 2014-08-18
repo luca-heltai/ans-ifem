@@ -266,8 +266,8 @@ int main(int argc, char **argv)
 {
   try
     {
-      IFEMParameters<2> par(argc,argv);
-      ImmersedFEM<2> test (par);
+      IFEMParameters<3> par(argc,argv);
+      ImmersedFEM<3> test (par);
       test.run ();
     }
   catch (exception &exc)
