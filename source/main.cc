@@ -256,7 +256,9 @@ where we have used the following parameters: \f$\rho=1.0\,{\rm kg}/{\rm m}^3\f$,
  */
 
 #include "immersed_fem.h"
+#include "immersed_fem_generalized.h"
 #include "ifem_parameters.h"
+#include "ifem_parameters_generalized.h"
 
 using namespace std;
 
@@ -266,8 +268,8 @@ int main(int argc, char **argv)
 {
   try
     {
-      IFEMParameters<2> par(argc,argv);
-      ImmersedFEM<2> test (par);
+      IFEMParametersGeneralized<3> par(argc,argv);
+      ImmersedFEMGeneralized<3> test (par);
       test.run ();
     }
   catch (exception &exc)

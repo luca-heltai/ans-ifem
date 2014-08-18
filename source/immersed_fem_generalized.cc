@@ -1,101 +1,4 @@
-//Note: Since we are not adaptively refining the mesh in this code, we are not
-// storing history of triangulation or DofHandler for restart purposes.
-// Copyright (C) 2012 by Luca Heltai (1), 
-// Saswati Roy (2), and Francesco Costanzo (3)
-//
-// (1) Scuola Internazionale Superiore di Studi Avanzati
-//     E-mail: luca.heltai@sissa.it
-// (2) Center for Neural Engineering, The Pennsylvania State University
-//     E-Mail: sur164@psu.edu
-// (3) Center for Neural Engineering, The Pennsylvania State University
-//     E-Mail: costanzo@engr.psu.edu
-//
-// This code was developed starting from the example
-// step-33 of the deal.II FEM library.
-//
-// This file is subject to QPL and may not be  distributed without 
-// copyright and license information. Please refer     
-// to the webpage http://www.dealii.org/ -> License            
-// for the  text  and further information on this license.
-//
-// Keywords: fluid-structure interaction, immersed method,
-//           finite elements, monolithic framework
-//
-// Deal.II version:  deal.II 7.2.pre
-
-// @sect3{Include files}
-// We include those elements of the deal.ii library
-// whose functionality is needed for our purposes.
-#include <deal.II/base/parameter_handler.h>
-#include <deal.II/base/point.h>
-#include <deal.II/base/function.h>
-#include <deal.II/base/tensor.h>
-#include <deal.II/base/parsed_function.h>
-#include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/multithread_info.h>
-#include <deal.II/base/thread_management.h>
-#include <deal.II/base/work_stream.h>
-#include <deal.II/base/parallel.h>
-#include <deal.II/base/utilities.h>
-#include <deal.II/base/conditional_ostream.h>
-
-#include <deal.II/lac/vector.h>
-#include <deal.II/lac/constraint_matrix.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/precondition.h>
-#include <deal.II/lac/solver_gmres.h>
-#include <deal.II/lac/sparse_ilu.h>
-#include <deal.II/lac/sparse_direct.h>
-#include <deal.II/lac/vector_view.h>
-
-#include <deal.II/grid/tria.h>
-#include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_refinement.h>
-#include <deal.II/grid/tria_accessor.h>
-#include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
-#include <deal.II/grid/grid_in.h>
-#include <deal.II/grid/grid_tools.h>
-
-#include <deal.II/dofs/dof_handler.h>
-#include <deal.II/dofs/dof_accessor.h>
-#include <deal.II/dofs/dof_tools.h>
-#include <deal.II/dofs/dof_renumbering.h>
-#include <deal.II/lac/constraint_matrix.h>
-
-#include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_dgp.h>
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/fe/fe_tools.h>
-#include <deal.II/fe/fe_system.h>
-#include <deal.II/fe/mapping_q_eulerian.h>
-
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/fe_field_function.h>
-#include <deal.II/numerics/data_out.h>
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-
-// Elements of the C++ standard library
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <map>
-#include <cmath>
-#include <typeinfo>
-
-
-// Names imported into to the global namespace:
-using namespace dealii;
-using namespace dealii::Functions;
-using namespace std;
-
-// A function that renames files using the shell command mv. The function has
-// copied from a function with the same name in ASPECT.
+#include "immersed_fem_generalized.h"
 
 void move_file (const string &old_name,
 				const string &new_name)
@@ -107,1330 +10,8 @@ void move_file (const string &old_name,
 									   old_name + " -> " + new_name));
 }
 
-// This class collects all of the user-specofied parameters, both
-// pertaining to physics of the problem (e.g., shear modulus, dynamic
-// viscosity), and to other numerical aspects of the simulation (e.g.,
-// names for the grid files, the specification of the boundary
-// conditions). This class is derived from the ParameterHandler class
-// in <code>deal.II</code>.
 
-template <int dim>
-class ProblemParameters :
-  public ParameterHandler
-{
-  public:
-    ProblemParameters(int argc, char **argv);
 
-   ~ProblemParameters();
-
-// Polynomial degree of the interpolation functions for the velocity
-// of the fluid and the displacement of the solid. This parameters
-// must be greater than one.
-
-    unsigned int degree;
-
-// Mass density of the fluid.
-
-    double rho_f;
-
-// Mass density of the immersed solid.
-   
-   double rho_s;
-   
-// Dynamic viscosity of the fluid.
-
-    double eta_f;
-   
-//Dynamic viscosity of the immersed solid.
-   
-   double eta_s;
-
-// Shear modulus of the immersed solid.
-
-    double mu;
- 
-// Poisson's ratio of the immersed solid.
-   
-   double nu;
-
-// Flag to indicate whether the solid is compressible or not
-  
-   bool solid_is_compressible;
-   
-// Time step.
-
-    double dt;
-
-
-// Final time.
-
-    double T;
-   
-// Intial time.
-   
-   double t_i;
-
-
-// Dimensional constant for the equation that sets the velocity of the
-// solid provided by the time derivative of the displacement function
-// equal to the velocity provided by the interpolation over the
-// control volume.
-
-    double Phi_B;
-
-
-// Displacement of the immersed solid at the initial time.
-
-    ParsedFunction<dim> W_0;
-
-
-// Velocity over the control volume at the initial time.
-
-    ParsedFunction<dim> u_0;
-
-
-// Dirichlet boundary conditions for the control volume.
-
-    ParsedFunction<dim> u_g;
-
-
-// Body force field.
-
-    ParsedFunction<dim> force;
-
-
-// Mesh refinement level of the control volume.
-
-    unsigned int ref_f;
-
-
-// Mesh refinement level for the immersed domain.
-
-    unsigned int ref_s;
-
-
-// Maps of boundary value functions: 1st: a boundary indicator;
-// 2nd: a boundary value function.
-
-    map<unsigned char, const Function<dim> *> boundary_map;
-
-
-// Maps of boundary value functions for homogeneous Dirichlet boundary
-// values: 1st: a boundary indicator; 2nd: a zero boundary value
-// function.
-
-    map<unsigned char, const Function<dim> *> zero_boundary_map;
-
-   //:
-   
-   bool solid_has_DBC;
-   
-   std::map<unsigned char, const Function<dim> *> boundary_map_solid;
-   
-   std::map<unsigned int, double> boundary_values_solid;
-//:   
-// Vector of flags for distinguishing between velocity and pressure
-// degrees of freedom.
-
-    vector<bool> component_mask;
-
-
-// Map storing the boundary conditions: 1st: a boundary degree of freedom;
-// 2nd: the value of field corresponding to the given degree of freedom.
-
-    map<unsigned int, double> boundary_values;
-
-
-// Flag to indicate whether or not the Newton iteration scheme must
-// update the Jacobian at each iteration.
-
-    bool update_jacobian_continuously;
-
-
-// Flag to indicate whether or not the time integration scheme must be
-// semi-implicit.
-
-    bool semi_implicit;
-
-
-// Flag to indicate how to deal with the non-uniqueness of the
-// pressure field.
-
-    bool fix_pressure;
-
-
-// Flag to indicate whether homogeneous Dirichlet boundary conditions
-// are applied.
-
-    bool all_DBC;
-
-
-// When set to true, an update of the system Jacobian is
-// performed at the beginning of each time step.
-
-    bool update_jacobian_at_step_beginning;
-
-
-// Name of the mesh file for the solid domain.
-
-    string solid_mesh;
-
-
-// Name of the mesh file for the fluid domain.
-
-    string fluid_mesh;
-
-
-// Name of the output file.
-
-    string output_name;
-   
-
-// The interval of timesteps between storage of output.
-
-    int output_interval;
-
-
-// Flag to indicating the use the spread operator.
-
-    bool use_spread;
-   
-// Flag to determine whether the solid and fluid have the same density or not
-   
-   bool same_density;
-   
-// Flag to determine whether the solid and fluid have the same viscosity or not
-   
-   bool same_viscosity;   
-
-// List of available consitutive models for the elastic
-// stress of the immersed solid:
-//
-// INH_0: incompressible neo-Hookean with $P_{s}^{e} = \mu (F - F^{-T})$.
-//
-// INH_1: incompressible neo-Hookean with $P_{s}^{e} = \mu F$.
-//
-// CircumferentialFiberModel:
-// $P_{s}^{e} = \mu F (e_{\theta} \otimes e_{\theta}) F^{-T}$.
-//
-//
-// CNH_W1: compressible neo-Hookean with
-// $ P^{e} = \mu [F - F^{-T}/ (\det(F)^{2.0 \beta} ) ]$, .
-// $\beta = \nu/(1 - 2 \nu)."
-//
-//   
-// CNH_W2: compressible neo-Hookean with
-// $P^{e} = \mu F - (\mu + \tau) F^{-T}/( det(F)^{2.0 \beta} )$,
-// $\beta= \nu/(1 - 2 \nu)$,
-// $\tau$ is initial isotropic stress (residual pressure).
-//
-//
-// STVK: Saint Venant Kirchhoff material with  
-// $ P^{e} = F (2 \mu E + \lambda \tr(E) I)
-// $ E = 1/2 (F^{T} F - I)$, 
-// $ \lambda = 2.0 \mu \nu/(1.0 - 2.0 \nu);" 
-
-    enum MaterialModel {INH_0 = 1, INH_1, CircumferentialFiberModel,
-						CNH_W1, CNH_W2, STVK};
-
-
-// Variable to identify the constitutive model for the immersed solid.
-
-    unsigned int material_model;
-
-
-// String to store the name of the finite element that will be used
-// for the pressure field.
-
-    string fe_p_name;
-   
- // Variable to store the center of the ring with circumferential fibers
-   
-   Point<dim> ring_center;
-   
-// Variables to store the strength(s) and location(s) of point source(s)
-   unsigned int n_pt_source; 
-   vector<ParsedFunction<dim>*> pt_source_strength;
-   vector<Point<dim> > pt_source_location;
-   
-// Variable to store the constants necessary to impose the penalty due to 
-// the compressibility of the solid    
-  
-   double pressure_constant_c1;
-   double pressure_constant_c2; 
-   
- // Variable to store the residual pressure  
-   
-   double tau;
-   
-// Variables to store the type of the quadrature rule to be used for integration
-// of entities defined over the immersed solid domain.
-   
-   enum SolidQuadratureRule {QGauss=1, Qiter_Qtrapez, Qiter_Qmidpoint};
-   unsigned int quad_s_type;
-   unsigned int quad_s_degree;
-   
-// Variable to store whether the flow should be modeled as a time-dependent
-// Stokes flow, i.e. the inertial terms in the momentum balance equation will
-//   be neglected for such a flow
-   
-   bool stokes_flow_like;
-   
-// Variables to store the parameters needed to construct the grids for the
-// control volume and solid for FSI problems which deal with a disk interacting 
-// with a viscous fluid.
-   bool disk_falling_test;
-   
-   Point<dim> rectangle_bl;
-   Point<dim> rectangle_tr;
-   
-   bool colorize_boundary;
-   
-   Point<dim> ball_center;
-   double ball_radius;
-   
-// Variable to store whether the Turek-Hron FSI Benchmark test is being run
-// or not.
-   
-   bool fsi_bm;
-   
-   bool cfd_test;
-   bool csm_test;
-   
-   bool only_NS;
-// Variable to store whether Dirichlet boundary conditions will be imposed on
-// the solid for the benchmark cases
-   bool use_dbc_solid;
-   
-// Variable to store whether we are running simulations involving the brain mesh.
-   
-   bool brain_mesh;
-   
-// Variable to store whether this is a restart or not. 
-   bool this_is_a_restart;
-  
-   
-// Variable to store whether data should be saved for later restart or not. 
-   bool save_for_restart;   
-
-   
-// Prefix of files required for restart.
-   string file_info_for_restart;
-      
-};
-
-// Class constructor: the name of the input file is
-// <code>immersed_fem.prm</code>. If the file does not exist at run time, it
-// is created, and the simulation parameters are given default values.
-
-template <int dim>
-ProblemParameters<dim>::ProblemParameters(int argc, char **argv) :
-		W_0(dim),
-		u_0(dim+1),
-		u_g(dim+1),
-		force(dim+1),
-		component_mask(dim+1, true)
-	    //,pt_source_strength(1)
-{
-
-// Declaration of parameters for the ParsedFunction objects
-// in the class.
-  this->enter_subsection("W0");
-  ParsedFunction<dim>::declare_parameters(*this, dim);
-  this->leave_subsection();
-
-  this->enter_subsection("u0");
-  ParsedFunction<dim>::declare_parameters(*this, dim+1);
-  this->leave_subsection();
-
-  this->enter_subsection("ug");
-  ParsedFunction<dim>::declare_parameters(*this, dim+1);
-  this->leave_subsection();
-
-  this->enter_subsection("force");
-  ParsedFunction<dim>::declare_parameters(*this, dim+1);
-  this->leave_subsection();
-   
-// Declaration of the class parameters and assignment of default
-// values.
-  this->declare_entry (
-    "Velocity finite element degree",
-    "2",
-    Patterns::Integer(2,10)
-  );
-  this->declare_entry ("Fluid refinement", "4", Patterns::Integer());
-  this->declare_entry ("Solid refinement", "1", Patterns::Integer());
-  this->declare_entry ("Delta t", ".1", Patterns::Double());
-  this->declare_entry ("Final t", "1", Patterns::Double());
-   this->declare_entry ("Initial t", "0.", Patterns::Double());
-  this->declare_entry ("Update J cont", "false", Patterns::Bool());
-  this->declare_entry (
-    "Force J update at step beginning",
-    "false",
-    Patterns::Bool()
-  );
-  this->declare_entry ("Fluid density", "1", Patterns::Double());
-  this->declare_entry ("Solid density", "1", Patterns::Double());
-  this->declare_entry ("Fluid viscosity", "1", Patterns::Double());
-  this->declare_entry ("Solid viscosity", "1", Patterns::Double());
-  this->declare_entry ("Solid elastic modulus", "1", Patterns::Double());
-  this->declare_entry ("Solid Poisson\'s ratio", "0.4", Patterns::Double());
-  this->declare_entry ("Phi_B", "1", Patterns::Double());
-  this->declare_entry ("Semi-implicit scheme", "true", Patterns::Bool());
-  this->declare_entry ("Fix one dof of p", "false", Patterns::Bool());
-  this->declare_entry (
-    "Solid mesh",
-    "mesh/solid_square.inp",
-    Patterns::Anything()
-  );
-  this->declare_entry (
-    "Fluid mesh",
-    "mesh/fluid_square.inp",
-    Patterns::Anything()
-  );
-  this->declare_entry ("Output base name", "out/square", Patterns::Anything());
-  this->declare_entry ("Dirichlet BC indicator", "1", Patterns::Integer(0,254));
-  this->declare_entry ("All Dirichlet BC", "true", Patterns::Bool());
-  this->declare_entry (
-    "Interval (of time-steps) between output",
-    "1",
-    Patterns::Integer()
-  );
-  this->declare_entry ("Use spread operator","true", Patterns::Bool());
-  this->declare_entry (
-    "Solid constitutive model",
-    "INH_0",
-    Patterns::Selection ("INH_0|INH_1|CircumferentialFiberModel|CNH_W1|CNH_W2|STVK"),
-    "Constitutive models available are: \n"
-    "INH_0: incompressible neo-Hookean with \n\t"
-					   "P^{e} = mu (F - F^{-T}); \n "
-    "INH_1: incompressible Neo-Hookean with \n\t" 
-					   "P^{e} = mu F; \n"
-    "CircumferentialFiberModel: incompressible with \n\t"
-					   "P^{e} = mu F (e_{\\theta} \\otimes e_{\\theta}) F^{-T};"
-    "\n this is suitable for annular solid comprising inextensible "
-    "circumferential fibers \n"
-    "CNH_W1: compressible neo-Hookean with \n\t"
-					   "P^{e} = mu [ F - F^{-T}/( det(F)^{2.0 beta} ) ], \n\t"
-					   "beta= nu/(1 - 2 * nu); \n"
-    "CNH_W2: compressible neo-Hookean with \n\t"
-					   "P^{e} = mu F - (mu + tau) F^{-T}/( det(F)^{2.0 beta} ),\n\t"
-					   "beta= nu/(1 - 2 * nu),\n\t"
-					   "tau is initial isotropic stress; \n"
-    "STVK: Saint Venant Kirchhoff material with \n\t"
-					   "P^{e} = F (2 mu E + lambda tr(E) I),\n\t"
-					   "E = 1/2 (F^{T} F - I),\n\t" 
-					   "lambda = 2.0 mu nu/(1.0 - 2.0 nu);"
-  );
-   
-   this->declare_entry("Solid is compressible", "false", Patterns::Bool());
-   
-   this->declare_entry("Solid pressure constant, c1", "1.", Patterns::Double());
-   this->declare_entry("Solid pressure constant, c2", "0.", Patterns::Double());
-   this->declare_entry("Solid residual pressure", "0.", Patterns::Double());
-   
-   this->declare_entry ("Finite element for pressure",
-						"FE_DGP",
-						Patterns::Selection("FE_DGP|FE_Q"),
-						"Select between FE_Q (Lagrange finite element space of "
-						"continuous, piecewise polynomials) or "
-						"FE_DGP(Discontinuous finite elements based on Legendre "
-						"polynomials) to approximate the pressure field"
-						);
-   
-   this->declare_entry(
-   "Solid quadrature rule", 
-   "QIter+QTrapez",
-   Patterns::Selection ("QGauss|QIter+QTrapez|QIter+QMidpoint"),
-   "Select one of the followings:\n"
-   "QGauss: Gauss-Legendre quadrature of arbitrary order;\n"
-   "QIter+QTrapez: Quadrature rule comprising copies of trapezoidal rule;\n"
-   "QIter+QMidpoint: Quadrature rule comprising copies of midpoint rule."
-					   );
-					   
-   this->declare_entry("Solid quadrature rule degree/copies", 
-					   "10",
-					   Patterns::Integer());  
-  
-   
-   this->enter_subsection (
-    "Equilibrium Solution of Ring with Circumferential Fibers"
-  );
-  this->declare_entry ("Inner radius of the ring", "0.25", Patterns::Double());
-  this->declare_entry ("Width of the ring", "0.0625", Patterns::Double());
-  this->declare_entry (
-    "Any edge length of the (square) control volume",
-    "1.",
-    Patterns::Double()
-  );
-  this->declare_entry (
-    "x-coordinate of the center of the ring",
-    "0.5",
-    Patterns::Double()
-  );
-  this->declare_entry (
-    "y-coordinate of the center of the ring",
-    "0.5",
-    Patterns::Double()
-  );
-  this->leave_subsection ();
-   
-   this->enter_subsection("Point source");
-   this->declare_entry("Number of point sources present",
-					   "0",
-					   Patterns::Integer(),
-					   "It is recommended that FE_Q be used for your simulation"
-					   "when source strength is non-zero.");
-   this->declare_entry("List of location(s) of point source(s):",
-					   "(0.5, 0.5)", 
-					   Patterns::Anything(),
-					   "Items of this list are separated using semi-colon.");
-   //:
-   this->enter_subsection("Strength of point source no.1");
-   ParsedFunction<dim>::declare_parameters(*this, 1);
-   this->leave_subsection();
-   
-   this->enter_subsection("Strength of point source no.2");
-   ParsedFunction<dim>::declare_parameters(*this, 1);
-   this->leave_subsection();
-   
-   this->enter_subsection("Strength of point source no.3");
-   ParsedFunction<dim>::declare_parameters(*this, 1);
-   this->leave_subsection();
-   
-   this->enter_subsection("Strength of point source no.4");
-   ParsedFunction<dim>::declare_parameters(*this, 1);
-   this->leave_subsection();
-   //:
-   this->leave_subsection();
-   
-   this->declare_entry("Time-dependent Stokes flow","false",Patterns::Bool());
-   
-   this->enter_subsection("Grid parameters for disk in viscous flow test");
-   //:
-   this->declare_entry("Use following grid parameters","false",Patterns::Bool());
-   //:
-   this->enter_subsection("Grid dimensions for the (rectangular) control volume");
-   this->declare_entry("bottom left corner, x-coord", "0.", Patterns::Double());
-   this->declare_entry("bottom left corner, y-coord", "0.", Patterns::Double());
-   this->declare_entry("top right corner, x-coord", "1.", Patterns::Double());
-   this->declare_entry("top right corner, y-coord", "1.", Patterns::Double());
-   this->declare_entry("Colorize boundary", "false", Patterns::Bool());
-   this->leave_subsection();
-   //:
-   this->enter_subsection("Grid dimensions for the disk");
-   this->declare_entry("disk center, x-coord", "0.5", Patterns::Double());
-   this->declare_entry("disk center, y-coord", "0.5", Patterns::Double());
-   this->declare_entry("disk radius", "0.1", Patterns::Double());
-   this->leave_subsection();
-   //:
-   this->leave_subsection();
-   
-   this->declare_entry("Turek-Hron FSI Benchmark test", "false", Patterns::Bool());
-   this->declare_entry("Turek-Hron CFD Benchmark test", "false", Patterns::Bool());
-   this->declare_entry("Turek-Hron CSM Benchmark test", "false", Patterns::Bool());
-   this->declare_entry("Turek-Hron test-- Impose DBC for solid",
-					   "false",
-					   Patterns::Bool());
-   this->declare_entry("Solve only NS component", "false", Patterns::Bool());
-
-   
-   this->enter_subsection("Grid parameters for brain mesh");
-   //:
-   this->declare_entry("Use brain mesh", "false",Patterns::Bool());
-   this->declare_entry("Scaling factor", "0.0033333", Patterns::Double());
-   this->declare_entry("Translation x-dirn", "28.0", Patterns::Double());
-   this->declare_entry("Translation y-dirn", "22.0", Patterns::Double());
-   //:
-   this->leave_subsection();
-   
-   this->enter_subsection("For restart");
-   this->declare_entry("Save data for a possible restart", 
-					   "true", Patterns::Bool());
-   this->declare_entry("This is a restart","false", Patterns::Bool());
-   this->declare_entry ("File prefix used for files needed for restart",
-						"-restart-",
-						Patterns::Anything());
-   
-   this->leave_subsection();
-
-   
-// Specification of the parameter file. If no parameter file is
-// specified in input, use the default one, else read each additional
-// argument.
-  if(argc == 1) 
-    this->read_input ("immersed_fem.prm");
-  else
-    for(int i=1; i<argc; ++i)
-      this->read_input(argv[i]);
-
-
-// Reading in the parameters.
-  this->enter_subsection ("W0");
-  W_0.parse_parameters (*this);
-  this->leave_subsection ();
-
-  this->enter_subsection ("u0");
-  u_0.parse_parameters (*this);
-  this->leave_subsection ();
-
-  this->enter_subsection ("ug");
-  u_g.parse_parameters (*this);
-  this->leave_subsection ();
-
-  this->enter_subsection ("force");
-  force.parse_parameters (*this);
-  this->leave_subsection ();
-   
-  ref_f = this->get_integer ("Fluid refinement");
-  ref_s = this->get_integer ("Solid refinement");
-  dt = this->get_double ("Delta t");
-  T = this->get_double ("Final t");
-  t_i = this->get_double ("Initial t");
-  update_jacobian_continuously = this->get_bool ("Update J cont");
-  update_jacobian_at_step_beginning = this->get_bool (
-    "Force J update at step beginning"
-  );
-
-  rho_f = this->get_double ("Fluid density");
-  rho_s = this->get_double ("Solid density");
-  eta_f = this->get_double ("Fluid viscosity"); 
-  eta_s = this->get_double ("Solid viscosity");
-
-  same_density = (rho_f == rho_s);
-  same_viscosity = (eta_f == eta_s);
-   
-  solid_is_compressible = this->get_bool ("Solid is compressible");
-   
-  mu = this->get_double ("Solid elastic modulus");
-  nu = this ->get_double ("Solid Poisson\'s ratio");
-  Phi_B = this->get_double ("Phi_B");
-
-  semi_implicit = this->get_bool ("Semi-implicit scheme");
-  fix_pressure = this->get_bool ("Fix one dof of p");
-
-  solid_mesh = this->get ("Solid mesh");
-  fluid_mesh = this->get ("Fluid mesh");
-  output_name = this->get ("Output base name");
-
-  unsigned char id = this->get_integer ("Dirichlet BC indicator");
-  all_DBC = this->get_bool ("All Dirichlet BC");
-  output_interval = this->get_integer (
-    "Interval (of time-steps) between output"
-  );
-  use_spread =this->get_bool ("Use spread operator");
-
-  if(this->get("Solid constitutive model") == string("INH_0"))
-    material_model = INH_0;
-  else if (this->get("Solid constitutive model") == string("INH_1"))
-    material_model = INH_1;
-  else if (this->get("Solid constitutive model")
-	   == string("CircumferentialFiberModel"))
-    material_model = CircumferentialFiberModel;
-  else if(this->get("Solid constitutive model") == string("CNH_W1"))
-	  material_model = CNH_W1;
-  else if (this->get("Solid constitutive model") == string("CNH_W2"))
-	  material_model = CNH_W2;
-  else if (this->get("Solid constitutive model")
-			== string("STVK"))
-	  material_model = STVK; 
-  else
-    cout
-      << " No matching constitutive model found! Using INH_0."
-      << endl;
-
-
-  pressure_constant_c1 = this->get_double("Solid pressure constant, c1");
-  pressure_constant_c2 = this->get_double("Solid pressure constant, c2");
-   
-  tau = this->get_double("Solid residual pressure");
-      
-   if(this->get("Solid quadrature rule") == string("QGauss"))
-   { quad_s_type = QGauss; cout << "Using QGauss \n";}
-   else if (this->get("Solid quadrature rule") == string("QIter+QTrapez"))
-   {  quad_s_type = Qiter_Qtrapez;cout << "Using QI+QT \n";}
-   else if (this->get("Solid quadrature rule")
-			== string("QIter+QMidpoint"))
-   { quad_s_type = Qiter_Qmidpoint;cout << "Using QI+QMid \n";}
-   else
-	  cout
-      << " No matching pattern found! Using QGauss."
-      << endl; 
-   
-   quad_s_degree = this->get_integer ("Solid quadrature rule degree/copies");
-	  cout<<" deg/copy="<<quad_s_degree<<endl;
-  component_mask[dim] = false;
-  static ZeroFunction<dim> zero (dim+1);
-  zero_boundary_map[id] = &zero;
-  boundary_map[id] = &u_g;
-   
-   
-  degree = this->get_integer ("Velocity finite element degree");
-
-  fe_p_name = this->get ("Finite element for pressure");
-  fe_p_name +="<dim>(" + Utilities::int_to_string(degree-1) + ")";
-
-   this->enter_subsection (
-					 "Equilibrium Solution of Ring with Circumferential Fibers"
-						   );
-   ring_center[0] = this->get_double ("x-coordinate of the center of the ring");
-   ring_center[1] = this->get_double ("y-coordinate of the center of the ring");
-   this->leave_subsection();
-   
-   this->enter_subsection("Point source");
-   //:
-   n_pt_source = this->get_integer("Number of point sources present");
-   cout<<"No. of pts ="<<n_pt_source<<endl;
-	
-   if (n_pt_source)
-   {
-   string str_loc_all = get("List of location(s) of point source(s):"); 
-   vector<string> vec_loc = Utilities::split_string_list(str_loc_all,';');
-   vector<string> vec_loc_coord;
-   
-	  Assert(n_pt_source == vec_loc.size(),
-			 ExcDimensionMismatch(n_pt_source, vec_loc.size())
-			 );
-	  
-	  
-	  for (unsigned int i=0; i< n_pt_source; ++i)
-	  {
-		 vec_loc_coord = Utilities::split_string_list(vec_loc[i].substr(1, vec_loc[i].size()-2),','); 
-		 Assert(vec_loc_coord.size() == dim,
-				ExcDimensionMismatch(vec_loc_coord.size(), dim)
-				);
-
-		 if(dim == 2)
-		 { 
-			pt_source_location.push_back(Point<dim>(Utilities::string_to_double(vec_loc_coord[0]),
-											   Utilities::string_to_double(vec_loc_coord[1])));
-		 }
-		 else
-			pt_source_location.push_back(Point<dim>(Utilities::string_to_double(vec_loc_coord[0]),
-											   Utilities::string_to_double(vec_loc_coord[1]),
-											   Utilities::string_to_double(vec_loc_coord[2])));
-		 
-		 
-		 pt_source_strength.push_back(new ParsedFunction<dim>(1));
-		 cout<<"Parsing source fn ...."<<"Strength of point source no." + Utilities::int_to_string(i+1)<<endl;
-		 this->enter_subsection("Strength of point source no." + Utilities::int_to_string(i+1));
-		 pt_source_strength[i]->parse_parameters(*this);
-		 this->leave_subsection();
-	  }
-   }
-   this->leave_subsection();
-   
-   stokes_flow_like = this->get_bool("Time-dependent Stokes flow");
-   
-   this->enter_subsection("Grid parameters for disk in viscous flow test");
-   //:
-   disk_falling_test = this->get_bool("Use following grid parameters");
-   //:
-   this->enter_subsection("Grid dimensions for the (rectangular) control volume");
-   rectangle_bl[0] = this->get_double("bottom left corner, x-coord");
-   rectangle_bl[1] = this->get_double("bottom left corner, y-coord");
-   
-   rectangle_tr[0] = this->get_double("top right corner, x-coord");
-   rectangle_tr[1] = this->get_double("top right corner, y-coord");
-   colorize_boundary = this->get_bool("Colorize boundary");
-   this->leave_subsection();
-
-   this->enter_subsection("Grid dimensions for the disk");
-   ball_center[0] = this->get_double ("disk center, x-coord");
-   ball_center[1] = this->get_double ("disk center, y-coord");
-   ball_radius = this->get_double ("disk radius");
-   this->leave_subsection();
-   //:
-   this->leave_subsection();
-   
-   fsi_bm = this->get_bool ("Turek-Hron FSI Benchmark test"); 
-   
-   cfd_test = this->get_bool("Turek-Hron CFD Benchmark test");
-   csm_test = this->get_bool("Turek-Hron CSM Benchmark test");
-   
-   use_dbc_solid = this->get_bool("Turek-Hron test-- Impose DBC for solid");
-   
-   only_NS = this->get_bool("Solve only NS component");
-   
-   static ZeroFunction<dim> zero_solid (dim);
-
-   if(fsi_bm) //This just to do with the way in which the boundary ids are set up for the meshes for the FSI BM problem 
-   {
-	  boundary_map[80] = &zero;
-	  boundary_map[81] = &zero;
-	  boundary_map[1] = &zero;
-	  zero_boundary_map[80] = &zero;
-	  zero_boundary_map[81] = &zero;
-	  zero_boundary_map[1] = &zero;
-	  if (use_dbc_solid)
-		 boundary_map_solid[81] = &zero_solid;
-   }
-   if (cfd_test && use_dbc_solid)
-	  boundary_map_solid[0] = &zero_solid;
-   
-
-   this->enter_subsection("Grid parameters for brain mesh");
-   //:
-   brain_mesh = this->get_bool("Use brain mesh");
-   //:
-   this->leave_subsection();
-   
-   if(only_NS)
-   {
-	  cout<<" NOTE: Only solving for NS component of the problem!"<<endl;
-	  same_density = true;
-	  rho_s = rho_f;
-	  same_viscosity = true;
-	  eta_s = eta_f;
-	  mu = 0.0;
-	  output_name += "_onlyNS";
-   }
-   
-   this->enter_subsection("For restart");
-   save_for_restart = this->get_bool ("Save data for a possible restart");
-   this_is_a_restart = this->get_bool ("This is a restart");
-   file_info_for_restart = this->get("File prefix used for files needed for restart");
-   this->leave_subsection();
-   
-   
-// The following lines help keeping track of what prm file goes
-
-// with a specific output.  Therefore, they are here for
-
-// convenience and not for any specific computational need.
-  ofstream paramfile((output_name+"_param.prm").c_str());
-  this->print_parameters(paramfile, this->Text);
-   
-   if (n_pt_source) pt_source_strength[0]->set_time(0.);
-   std::cout << "\n==============================" << std::endl;
-   std::cout << "Parameters\n" 
-   << "==========\n"
-   << "Density fluid:\t\t\t"   <<  rho_f << "\n"
-   << "Density solid:\t\t\t"   <<  rho_s << "\n"
-   << "Viscosity fluid:\t\t"  <<  eta_f << "\n" 
-   << "Viscosity solid:\t\t"  <<  eta_s<<"\n" 
-   << "Compressible solid:\t\t"<<  (solid_is_compressible? "true":"false") << "\n"
-   << "Shear mod. solid:\t\t" <<  mu <<"\n"
-   << "Poisson's ratio:\t\t"  <<  nu <<"\n"
-   << "Matl. type: \t\t\t"	  << material_model<<"\n"
-   << "Semi-implicit:\t\t\t"  <<  (semi_implicit? "true":"false") <<"\n"
-   << "delta_t:\t\t\t"		  <<  dt << "\n"
-   << "Final time:\t\t\t"	  <<  T << "\n"
-   //<< "Pt. source strength (at t= 0):\t"<< (n_pt_source ?pt_source_strength[0]->value(Point<dim>(0.,0.):0) << "\n";
-   << "Output files name:\t\t"  << output_name << "\n";
-
-   if (solid_is_compressible)
-   cout
-   << "Constant c1:\t\t\t "<< pressure_constant_c1 <<"\n"
-   << "Constant c2:\t\t\t "<< pressure_constant_c2 <<"\n";
-   
-   cout<< std::endl;
-   
-}
-
-
-template <int dim>
-ProblemParameters<dim>::~ProblemParameters()
-{
-   for(unsigned int i = 0; i < n_pt_source; ++i)
-   delete pt_source_strength[i];
-}
-
-// This class provides the exact distribution of the Lagrange
-// multiplier for enforcing incompressibility both in the fluid and in
-// the immersed domains for a specific problem. The latter concerns
-// the equilibrium of a circular cylinder immersed in an
-// incompressible Newtonian fluid.  The immersed domain is assumed to
-// be an incompressible elastic material with an elastic response
-// proportional to the stretch of elastic fibers wound in the
-// circumferential direction (hoop). The constitutive equations of the
-// cylinder correspond to the choice of "Solid constitutive model" as
-// "CircumferentialFiberModel".  Finally, we refer to this particular
-// problem as the "Hello world" problem for immersed methods.  We
-// learned this expression from our colleague Boyce E. Griffith,
-// currently at the Leon H. Charney Division of Cardiology, Department
-// of Medicine, NYU School of Medicine, New York University.
-
-template<int dim>
-class ExactSolutionRingWithFibers :
-  public Function<dim>
-{
-  public:
-
-// No default constructor is defined. Simulation objects must be
-// initialized by assigning the simulation parameters, which are
-// elements of objects of type <code>ProblemParameters</code>.
-
-    ExactSolutionRingWithFibers (ProblemParameters<dim> &par);
-
-    void vector_value (const Point <dim> &p,
-                       Vector <double> &values) const;
-
-    void vector_value_list(const vector< Point<dim> > &points,
-                           vector <Vector <double> > &values ) const;
-
-// Inner radius of the ring.
-
-    double R;
-
-// Width of the ring.
-
-    double w;
-
-// Edge length of the square control volume.
-
-    double l;
-
-// Center of the ring.
-
-    Point<dim> center;
-
-  private:
-
-    ProblemParameters<dim> &par;
-};
-
-// Class constructor.
-
-template<int dim>
-ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
-  ProblemParameters<dim> &prm
-)
-		:
-		Function<dim>(dim+1),
-		par(prm)
-{
-  par.enter_subsection (
-    "Equilibrium Solution of Ring with Circumferential Fibers"
-  );
-  R = par.get_double ("Inner radius of the ring");
-  w = par.get_double ("Width of the ring");
-  l = par.get_double ("Any edge length of the (square) control volume");
-  center[0] = par.get_double ("x-coordinate of the center of the ring");
-  center[1] = par.get_double ("y-coordinate of the center of the ring");
-  par.leave_subsection ();
-}
-
-// It provides the Lagrange multiplier (pressure)
-// distribution in the control volume and in the ring at equilibrium.
-
-template<int dim>
-void
-ExactSolutionRingWithFibers<dim>::vector_value
-(
-  const Point <dim> &p,
-  Vector <double> &values
-) const
-{
-  double r = p.distance (center);
-
-  values = 0.0;
-
-  double p0 = -numbers::PI*par.mu/(2*l*l)*w*(2*R+w);
-
-  if (r >= (R+w))
-    values(dim) = p0;
-  else if (r >= R)
-    values(dim) = p0 + par.mu*log((R + w)/r);
-  else
-    values(dim) = p0 + par.mu*log(1.0 + w/R);
-}
-
-// It provides the Lagrange multiplier (pressure) distribution in the
-// control volume and in the ring at equilibrium.
-
-template<int dim>
-void
-ExactSolutionRingWithFibers<dim>::vector_value_list
-(
-  const vector< Point<dim> > &points,
-  vector <Vector <double> > &values
-) const
-{
-  Assert (points.size() == values.size(),
-	  ExcDimensionMismatch(points.size(), values.size()));
-
-  for (unsigned int i = 0; i < values.size(); ++i)
-    vector_value (points[i], values[i]);
-}
-
-// It defines simulations objects. The only method in the public
-// interface is <code>run()</code>, which is invoked to carry out the
-// simulation.
-
-template <int dim>
-class ImmersedFEM
-{
-  public:
-
-
-// No default constructor is defined. Simulation objects must be
-// initialized by assigning the simulation parameters, which are
-// elements of objects of type ProblemParameters.
-
-    ImmersedFEM(ProblemParameters<dim> &par);
-    ~ImmersedFEM();
-
-    void run ();
-
-  private:
-
-
-// The parameters of the problem.
-
-    ProblemParameters<dim> &par;
-
-
-// Vector of boundary indicators. The type of this vector matches the
-// return type of the function <code>Triangulation< dim, spacedim
-// >::get_boundary_indicator()</code>.
-
-    vector<unsigned char> boundary_indicators;
-
-
-// Triangulation over the control volume (fluid domain).  Following
-// <code>deal.II</code> conventions, a triangulation pertains to a manifold
-// of dimension <i>dim</i> embedded in a space of dimension
-// <i>spacedim</i>. In this case, only a single dimensional parameter
-// is specified so that the dimension of the manifold and of the
-// containing space are the same.
-
-    Triangulation<dim> tria_f;
-
-
-// Triangulations of the immersed domain (solid domain).  Following
-// <code>deal.II</code> conventions, a triangulation pertains to a manifold
-// of dimension <i>dim</i> embedded in a space of dimension
-// <i>spacedim</i>. While in this case the two dimension parameters
-// are set equal to each other, it is possible to formulate problems
-// in which the immersed domain is a manifold of dimension lower than
-// that of the containing space.
-
-    Triangulation<dim, dim> tria_s;
-
-
-// <code>FESystem</code> for the control volume. It consists of two fields:
-// velocity (a vector field of dimension <i>dim</i>) and pressure (a
-// scalar field). The meaning of the parameter <i>dim</i> is as for
-// the <code>Triangulation<dim> tria_f</code> element of the class.
-
-    FESystem<dim> fe_f;
-
-
-// A variable to check whether the pressure field is approximated
-// using the <code>FE_DGP</code> elements.
-
-    bool dgp_for_p;
-
-
-// This is the <code>FESystem</code> for the immersed domain. 
-
-    FESystem<dim, dim> fe_s;
-
-
-// The dof_handler for the control volume.
-
-    DoFHandler<dim> dh_f;
-
-
-// The dof_handler for the immersed domain.
-
-    DoFHandler<dim, dim> dh_s;
-
-
-// The triangulation of for the immersed domain defines the reference
-// configuration of the immersed domain. As the immersed domain moves
-// through the fluid, it is important to be able to conveniently
-// describe quantities defined over the immersed domain according to
-// an Eulerian view. It is therefore convenient to define a
-// <code>MappingQEulerian</code> object that will support such a
-// description.
-
-    MappingQEulerian<dim, Vector<double>, dim> * mapping;
-
-
-// The quadrature object for the control volume.
-
-    QGauss<dim> quad_f;
-
-
-// The quadrature object for the immersed domain.
-   
-   Quadrature<dim> quad_s;
- 
-   
-// Constraints matrix for the control volume.
-
-    ConstraintMatrix constraints_f;
-
-
-// Constraints matrix for the immersed domain.
-
-    ConstraintMatrix constraints_s;
-
-
-// Sparsity pattern.
-
-    BlockSparsityPattern sparsity;
-
-
-// Jacobian of the residual.
-
-    BlockSparseMatrix<double> JF;
-
-
-// Object of <code>BlockSparseMatrix<double></code> type to be used in
-// place of the real Jacobian when the real Jacobian is not to be modified.
-
-
-    BlockSparseMatrix<double> dummy_JF;
-
-
-// State of the system at current time step: velocity, pressure, and
-// displacement of the immersed domain.
-
-    BlockVector<double> current_xi;
-
-
-// State of the system at previous time step: velocity, pressure, and
-// displacement of the immersed domain.
-
-    BlockVector<double> previous_xi;
-
-
-// Approximation of the time derivative of the state of the system.
-
-    BlockVector<double> current_xit;
-
-
-// Current value of the residual.
-
-    BlockVector<double> current_res;
-
-
-// Newton iteration update.
-
-    BlockVector<double> newton_update;
-
-
-// Vector to compute the average pressure when the average pressure is
-// set to zero.
-
-    Vector<double> pressure_average;
-
-
-// Vector to represent a uniform unit pressure.
-
-    Vector<double> unit_pressure;
-
-// Number of degrees of freedom for each component of the system.
-
-    unsigned int n_dofs_u, n_dofs_p, n_dofs_up, n_dofs_W, n_total_dofs;
-
-// A couple of vectors that can be used as temporary storage. They are
-// defined as a private member of the class to avoid that the object
-// is allocated and deallocated when used, so to gain in efficiency.
-    Vector<double> tmp_vec_n_total_dofs;
-    Vector<double> tmp_vec_n_dofs_up;
-   Vector<double> tmp_vec_n_dofs_W;
-   
-
-// Matrix to be inverted when solving the problem.
-    SparseDirectUMFPACK JF_inv;
-
-
-// Scalar used for conditioning purposes.
-    double scaling;
-
-
-// Variable to keep track of the previous time.
-    double previous_time;
-
-
-// The first dof of the pressure field.
-    unsigned int constraining_dof;
-
-
-// A container to store the dofs corresponding to the pressure field.
-    set<unsigned int> pressure_dofs;
-
-
-// Storage for the elasticity operator of the immersed domain.
-    Vector <double> A_gamma;
-
-
-// Mass matrix of the immersed domain.
-    SparseMatrix<double> M_gamma3;
-
-
-// Inverse of M_gamma3.
-    SparseDirectUMFPACK M_gamma3_inv;
-
-
-// M_gamma3_inv * A_gamma.
-    Vector <double> M_gamma3_inv_A_gamma;
-
-
-//Vector to store the volume flux due to the point-source
-   Vector <double> volume_flux;
-   
-
-// Area of the control volume.
-    double area;
-
-
-// File stream that is used to output a file containing information
-// about the fluid flux, area and the centroid of the immersed domain
-// over time.
-    ofstream global_info_file;
- 
-   // File stream that is used to output a file containing information
-   // about the tip displacement of the flag in the Turek-Hron FSI Benchmark   
-    ofstream fsi_bm_out_file;
-
-   
-   //Variable to store the current_time;
-   double current_time;
-   
-   
-   //Variable to store the time step
-   unsigned int time_step;
-   
-   
-   // Variable to store time step size
-   double dt;
-   
-   
-   //The following be necessary for serialization purposes
-   friend class boost::serialization::access;
-
-
-// ---------------------
-// Function declarations
-// ---------------------
-    void create_triangulation_and_dofs ();
-
-    void apply_constraints (vector<double> &local_res,
-                            FullMatrix<double> &local_jacobian,
-                            const Vector<double> &local_up,
-                            const vector<unsigned int> &dofs,
-							unsigned int offset);
-
-    void compute_current_bc (const double time);
-
-    void apply_current_bc (
-      BlockVector<double> &vec,
-      const double time);
-
-    void assemble_sparsity (Mapping<dim, dim> &mapping);
-
-    void  get_area_and_first_pressure_dof ();
-
-    void residual_and_or_Jacobian (
-      BlockVector<double> &residual,
-      BlockSparseMatrix<double> &Jacobian,
-      const BlockVector<double> &xit,
-      const BlockVector<double> &xi,
-      const double alpha,
-      const double t
-    );
-
-    void distribute_residual (
-      Vector<double> &residual,
-      const vector<double> &local_res,
-      const vector<unsigned int> &dofs_1,
-      const unsigned int offset_1
-    );
-
-    void distribute_jacobian (
-      SparseMatrix<double> &Jacobian,
-      const FullMatrix<double> &local_Jac,
-      const vector<unsigned int> &dofs_1,
-      const vector<unsigned int> &dofs_2,
-      const unsigned int offset_1,
-      const unsigned int offset_2
-    );
-
-    void distribute_constraint_on_pressure (
-      Vector<double> &residual,
-      const double average_pressure
-    );
-
-    void distribute_constraint_on_pressure (
-      SparseMatrix<double> &jacobian,
-      const vector<double> &pressure_coefficient,
-      const vector<unsigned int> &dofs,
-      const unsigned int offset
-    );
-
-    void localize (
-      Vector<double> &local_M_gamma3_inv_A_gamma,
-      const Vector<double> &M_gamma3_inv_A_gamma,
-      const vector<unsigned int> &dofs
-    );
-
-    void get_Agamma_values (
-      const FEValues<dim,dim> &fe_v_s,
-      const vector< unsigned int > &dofs,
-      const Vector<double> &xi,
-      Vector<double> &local_A_gamma
-    );
-
-   template <class FEVal>
-    void get_Pe_F_and_DPeFT_dxi_values (
-      const FEVal &fe_v_s,
-      const vector< unsigned int > &dofs,
-      const Vector<double> &xi,
-      const bool update_jacobian,
-      vector<Tensor<2,dim,double> > &Pe,
-      vector<Tensor<2,dim,double> > &F,
-      vector< vector<Tensor<2,dim,double> > > & DPe_dxi
-    );
-
-   void get_inverse_transpose (
-	  const vector < Tensor <2, dim> > &F,
-	  vector < Tensor <2, dim> > &local_invFT
-   );
-   
-   void get_volume_flux_vector (const double t);
-   
-    void calculate_error () const;
-
-    unsigned int n_dofs() const {
-      return n_total_dofs;
-    };
-
-    void output_step (
-      const double t,
-      const BlockVector<double> &solution,
-      const unsigned int step_number,
-	  const double h,
-	  const bool _output = false
-    );
-
-    template<class Type>
-    inline void set_to_zero (Type &v) const;
-
-    template<class Type>
-    inline void set_to_zero (Table<2,Type> &v) const;
-
-    template<class Type>
-    inline void set_to_zero(vector<Type> &v) const;
-
-    double norm(const vector<double> &v);
-   
-   void fsi_bm_postprocess();
-   
-   void fsi_bm_postprocess2();
-   
-   template <class Archive>
-   void serialize(Archive &ar, const unsigned int version);
-   
-   void restart_computations();
-   
-   void save_for_restart();
-
-};
 
 // Constructor:
 //    Initializes the FEM system of the control volume;
@@ -1439,20 +20,19 @@ class ImmersedFEM
 //    It runs the <code>create_triangulation_and_dofs</code> function.
 
 template <int dim>
-ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
+ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<dim> &par)
 		:
 		par (par),
 		fe_f (
 		  FE_Q<dim>(par.degree),
 		  dim,
 		  *FETools::get_fe_from_name<dim>(par.fe_p_name),
-		  par.degree-1
+		  1
 		),
 		fe_s (FE_Q<dim, dim>(par.degree), dim),
 		dh_f (tria_f),
 		dh_s (tria_s),
 		quad_f (par.degree+2)
-//,quad_s(par.degree+2)
 {
   if(par.degree <= 1)
     cout
@@ -1467,13 +47,13 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 
    switch (par.quad_s_type) 
    {
-	  case ProblemParameters<dim>::QGauss :
+	  case IFEMParametersGeneralized<dim>::QGauss :
 		 quad_s.initialize(
 						   QGauss<dim>(par.quad_s_degree).get_points(),
 						   QGauss<dim>(par.quad_s_degree).get_weights()
 						   );
 		 break;
-	  case ProblemParameters<dim>::Qiter_Qtrapez :
+	  case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
 		 quad_s.initialize(
 						   QIterated<dim>
 						   (QTrapez<1>(), par.quad_s_degree).get_points(),
@@ -1481,7 +61,7 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 						   (QTrapez<1>(), par.quad_s_degree).get_weights()
 						   );
 		 break;
-	  case ProblemParameters<dim>::Qiter_Qmidpoint :
+	  case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
 		 quad_s.initialize(
 						   QIterated<dim>
 						   (QMidpoint<1>(), par.quad_s_degree).get_points(),
@@ -1517,7 +97,7 @@ ImmersedFEM<dim>::ImmersedFEM (ProblemParameters<dim> &par)
 // closing of the record keeping file.
 
 template <int dim>
-ImmersedFEM<dim>::~ImmersedFEM ()
+ImmersedFEMGeneralized<dim>::~ImmersedFEMGeneralized ()
 {
    if (par.save_for_restart)
    	  save_for_restart();
@@ -1535,7 +115,7 @@ ImmersedFEM<dim>::~ImmersedFEM ()
 
 template <int dim>
 void
-ImmersedFEM<dim>::compute_current_bc (const double t)
+ImmersedFEMGeneralized<dim>::compute_current_bc (const double t)
 {
   par.u_g.set_time(t);
   VectorTools::interpolate_boundary_values (
@@ -1556,7 +136,7 @@ ImmersedFEM<dim>::compute_current_bc (const double t)
 
 template <int dim>
 void
-ImmersedFEM<dim>::apply_current_bc
+ImmersedFEMGeneralized<dim>::apply_current_bc
 (
   BlockVector<double> &vec,
   const double t
@@ -1592,10 +172,10 @@ ImmersedFEM<dim>::apply_current_bc
 
 template <int dim>
 void
-ImmersedFEM<dim>::create_triangulation_and_dofs ()
+ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 {
    
-  if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel)
+  if(par.material_model == IFEMParametersGeneralized<dim>::CircumferentialFiberModel)
     {
 // This is used only by the solution of the problem with the immersed
 // domain consisting of a circular cylinder.  We only implemented this
@@ -1664,9 +244,9 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
  if (par.fsi_bm)
  {
-	Point<2> center_circ(0.2, 0.2);
+	Point<dim> center_circ(0.2, 0.2);
 	double radius_circ = 0.05;
-	static const HyperBallBoundary<2> boundary_cyl(center_circ,radius_circ);
+	static const HyperBallBoundary<dim> boundary_cyl(center_circ,radius_circ);
 	
 	tria_f.set_boundary(80, boundary_cyl);
 //	tria_f.set_boundary(81, boundary_cyl);
@@ -1997,7 +577,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 template <int dim>
 void
-ImmersedFEM<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
+ImmersedFEMGeneralized<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
 {
   FEFieldFunction<dim, DoFHandler<dim>, Vector<double> > up_field (dh_f, tmp_vec_n_dofs_up);
 
@@ -2044,7 +624,7 @@ ImmersedFEM<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
 
 template <int dim>
 void
-ImmersedFEM<dim>::get_area_and_first_pressure_dof ()
+ImmersedFEMGeneralized<dim>::get_area_and_first_pressure_dof ()
 {
   area = 0.0;
   typename DoFHandler<dim,dim>::active_cell_iterator
@@ -2091,7 +671,7 @@ ImmersedFEM<dim>::get_area_and_first_pressure_dof ()
 
 template <int dim>
 void
-ImmersedFEM<dim>::residual_and_or_Jacobian
+ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
 (
   BlockVector<double> &residual,
   BlockSparseMatrix<double> &jacobian,
@@ -3462,7 +2042,7 @@ if (par.use_spread)
 
 template <int dim>
 void
-ImmersedFEM<dim>::run ()
+ImmersedFEMGeneralized<dim>::run ()
 {
    double res_norm = 0.0;
    
@@ -3672,7 +2252,7 @@ ImmersedFEM<dim>::run ()
     }
 // End of the cycle over time.
 
-  if(par.material_model == ProblemParameters<dim>::CircumferentialFiberModel)
+  if(par.material_model == IFEMParametersGeneralized<dim>::CircumferentialFiberModel)
     calculate_error();
 
 }
@@ -3683,7 +2263,7 @@ ImmersedFEM<dim>::run ()
 
 template <int dim>
 void
-ImmersedFEM<dim>::output_step
+ImmersedFEMGeneralized<dim>::output_step
 (
   const double t,
   const BlockVector<double> &solution,
@@ -3833,7 +2413,7 @@ ImmersedFEM<dim>::output_step
 
 template <int dim>
 void
-ImmersedFEM<dim>::get_Agamma_values
+ImmersedFEMGeneralized<dim>::get_Agamma_values
 (
   const FEValues<dim,dim> &fe_v_s,
   const vector< unsigned int > &dofs,
@@ -3885,7 +2465,7 @@ ImmersedFEM<dim>::get_Agamma_values
 template <int dim>
 template <class FEVal>
 void
-ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
+ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
   const FEVal &fe_v_s,
   const vector< unsigned int > &dofs,
   const Vector<double> &xi,
@@ -3926,7 +2506,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 	 
 	 switch (par.material_model)
 	 {
-		case ProblemParameters<dim>::INH_0:
+		case IFEMParametersGeneralized<dim>::INH_0:
 		   Pe[qs] = par.mu * ( F - transpose( invert(F) ) );
 		   if( update_jacobian )
 		   {
@@ -3949,7 +2529,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 		      }
 		   }
 		   break;
-		case ProblemParameters<dim>::INH_1 :
+		case IFEMParametersGeneralized<dim>::INH_1 :
 		   Pe[qs] = par.mu * F;
 		   if( update_jacobian )
 		   {
@@ -3972,7 +2552,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 		      }
 		   }
 		   break;
-		case ProblemParameters<dim>::CircumferentialFiberModel:
+		case IFEMParametersGeneralized<dim>::CircumferentialFiberModel:
 		   p = fe_v_s.quadrature_point(qs) - par.ring_center;
 		   
 		   // Find the unit vector along the tangential direction
@@ -4005,7 +2585,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 		      }
 		   }
 		   break;
-		case ProblemParameters<dim>::CNH_W1 :
+		case IFEMParametersGeneralized<dim>::CNH_W1 :
 		   J = determinant(F);
 
 		   beta = par.nu/(1 - 2 * par.nu);
@@ -4043,7 +2623,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 			  }
 		   }
 		   break;
-		case ProblemParameters<dim>::CNH_W2 :
+		case IFEMParametersGeneralized<dim>::CNH_W2 :
 		   J = determinant(F);
 		   beta = par.nu/(1 - 2 * par.nu);
 		   
@@ -4081,7 +2661,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 			  }
 		   }
 		   break;
-		case ProblemParameters<dim>::STVK :
+		case IFEMParametersGeneralized<dim>::STVK :
 		   // Saint-Venant Kirchhoff material given as: P=F(2*mu*E + lambda*tr(E)*I)
 		   // which will be represented here as P=F(2*mu*tmp + beta*tr(tmp)I)
 		   beta = 2.0 * par.mu * par.nu/(1.0 - 2.0 *par.nu);
@@ -4161,7 +2741,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
 template <int dim>
 void
-ImmersedFEM<dim>::get_inverse_transpose
+ImmersedFEMGeneralized<dim>::get_inverse_transpose
 (const vector < Tensor <2, dim> > &F,
  vector < Tensor <2, dim> > &local_invFT)
 {
@@ -4174,7 +2754,7 @@ ImmersedFEM<dim>::get_inverse_transpose
 
 template <int dim>
 void
-ImmersedFEM<dim>::distribute_residual
+ImmersedFEMGeneralized<dim>::distribute_residual
 (
   Vector<double> &residual,
   const vector<double> &local_res,
@@ -4190,7 +2770,7 @@ ImmersedFEM<dim>::distribute_residual
 
 template <int dim>
 void
-ImmersedFEM<dim>::distribute_jacobian
+ImmersedFEMGeneralized<dim>::distribute_jacobian
 (
   SparseMatrix<double> &Jacobian,
   const FullMatrix<double> &local_Jac,
@@ -4211,7 +2791,7 @@ ImmersedFEM<dim>::distribute_jacobian
 
 template <int dim>
 void
-ImmersedFEM<dim>::apply_constraints
+ImmersedFEMGeneralized<dim>::apply_constraints
 (
   vector<double> &local_res,
   FullMatrix<double> &local_jacobian,
@@ -4277,7 +2857,7 @@ if (offset == 0) //: i.e. constraints need to be applied for fluid dofs
 // Assemble the pressure constraint into the residual.
 template <int dim>
 void
-ImmersedFEM<dim>::distribute_constraint_on_pressure
+ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
 (
 Vector<double> &residual,
 const double average_pressure
@@ -4289,7 +2869,7 @@ residual(constraining_dof) += average_pressure*scaling/area;
 // Assemble the pressure constraint into the Jacobian.
 template <int dim>
 void
-ImmersedFEM<dim>::distribute_constraint_on_pressure
+ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
 (
 SparseMatrix<double> &jacobian,
 const vector<double> &pressure_coefficient,
@@ -4311,7 +2891,7 @@ const vector<double> &pressure_coefficient,
 
 template <int dim>
 void
-ImmersedFEM<dim>::localize
+ImmersedFEMGeneralized<dim>::localize
 (
   Vector<double> &local_M_gamma3_inv_A_gamma,
   const Vector<double> &M_gamma3_inv_A_gamma,
@@ -4326,7 +2906,7 @@ ImmersedFEM<dim>::localize
 // Determination of the volume flux vector corresponding to the point source.
 template <int dim>
 void
-ImmersedFEM<dim>::get_volume_flux_vector (const double t)
+ImmersedFEMGeneralized<dim>::get_volume_flux_vector (const double t)
 {
    double strength;
    
@@ -4362,7 +2942,7 @@ ImmersedFEM<dim>::get_volume_flux_vector (const double t)
 
 template <int dim>
 void
-ImmersedFEM<dim>::calculate_error () const
+ImmersedFEMGeneralized<dim>::calculate_error () const
 {
   ExactSolutionRingWithFibers<dim> exact_sol(par);
 
@@ -4415,13 +2995,13 @@ ImmersedFEM<dim>::calculate_error () const
    string quad_name;
    switch (par.quad_s_type) 
    {
-	  case ProblemParameters<dim>::QGauss :
+	  case IFEMParametersGeneralized<dim>::QGauss :
 		 quad_name ="QG-"+Utilities::int_to_string(par.quad_s_degree) ;
 		 break;
-	  case ProblemParameters<dim>::Qiter_Qtrapez :
+	  case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
 		 quad_name ="QI-QT-"+Utilities::int_to_string(par.quad_s_degree) ;
 		 break;
-	  case ProblemParameters<dim>::Qiter_Qmidpoint :
+	  case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
 		 quad_name = "QI-QM-"+Utilities::int_to_string(par.quad_s_degree);
 		 break;
 	  default:
@@ -4472,7 +3052,7 @@ ImmersedFEM<dim>::calculate_error () const
 //Calculation and output of tip displacement of the flag and lift-drag on the 
 // cylinder+flag in the Turek-Hron FSI benchmark test
 template <int dim>
-void ImmersedFEM<dim>::fsi_bm_postprocess()
+void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 {
    //: Some geometric features of the benchmark test(s)
    const Point<dim> center_cyl (0.2, 0.2); //: Center of the cylinder
@@ -4948,7 +3528,7 @@ void ImmersedFEM<dim>::fsi_bm_postprocess()
 
 
 template <int dim>
-void ImmersedFEM<dim>::fsi_bm_postprocess2()
+void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess2()
 {
    //: Some geometric features of the benchmark test(s)
    const Point<dim> center_cyl (0.2, 0.2); //: Center of the cylinder
@@ -5298,7 +3878,7 @@ void ImmersedFEM<dim>::fsi_bm_postprocess2()
 
 template <int dim>
 template <class Archive>
-void ImmersedFEM<dim>::serialize(Archive &ar, const unsigned int version)
+void ImmersedFEMGeneralized<dim>::serialize(Archive &ar, const unsigned int version)
 {
    ar &current_time;
    ar &dt;
@@ -5307,7 +3887,7 @@ void ImmersedFEM<dim>::serialize(Archive &ar, const unsigned int version)
 
 
 template <int dim>
-void ImmersedFEM<dim>::restart_computations()
+void ImmersedFEMGeneralized<dim>::restart_computations()
 {
    // Load the details concerning the temporal integration.
    //Currently we are reading in: current_time, timestep and dt 
@@ -5347,7 +3927,7 @@ void ImmersedFEM<dim>::restart_computations()
 }
 
 template <int dim>
-void ImmersedFEM<dim>::save_for_restart()
+void ImmersedFEMGeneralized<dim>::save_for_restart()
 {
    // Assumption is that if the initial time is 0 then this the first time that this
    // computation 
@@ -5407,7 +3987,7 @@ void ImmersedFEM<dim>::save_for_restart()
 
 template <int dim>
 template <class Type>
-void ImmersedFEM<dim>::set_to_zero (Type &v) const
+void ImmersedFEMGeneralized<dim>::set_to_zero (Type &v) const
 {
   v = 0;
 }
@@ -5416,7 +3996,7 @@ void ImmersedFEM<dim>::set_to_zero (Type &v) const
 // generic type.
 template <int dim>
 template <class Type>
-void ImmersedFEM<dim>::set_to_zero (vector<Type> &v) const
+void ImmersedFEMGeneralized<dim>::set_to_zero (vector<Type> &v) const
 {
   for(unsigned int i = 0; i < v.size(); ++i) set_to_zero(v[i]);
 }
@@ -5425,7 +4005,7 @@ void ImmersedFEM<dim>::set_to_zero (vector<Type> &v) const
 // generic type.
 template <int dim>
 template <class Type>
-void ImmersedFEM<dim>::set_to_zero (Table<2, Type> &v) const
+void ImmersedFEMGeneralized<dim>::set_to_zero (Table<2, Type> &v) const
 {
   for(unsigned int i=0; i<v.size()[0]; ++i)
     for(unsigned int j=0; j<v.size()[1]; ++j) set_to_zero(v(i,j));
@@ -5433,61 +4013,13 @@ void ImmersedFEM<dim>::set_to_zero (Table<2, Type> &v) const
 
 // Determination of the norm of a vector.
 template <int dim>
-double ImmersedFEM<dim>::norm(const vector<double> &v)
+double ImmersedFEMGeneralized<dim>::norm(const vector<double> &v)
 {
   double norm = 0;
   for( unsigned int i = 0; i < v.size(); ++i) norm += v[i]*v[i];
   return norm = sqrt(norm);
 }
 
-// The main function: essentially the same as in the
-// <code>deal.II</code> examples.
-int main(int argc, char **argv)
-{
-  try
-    {
-      ProblemParameters<2> par(argc,argv);
-      ImmersedFEM<2> test (par);
-      test.run ();
-    }
-  catch (exception &exc)
-    {
-      cerr
-	<< endl
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
-      cerr
-	<< "Exception on processing: "
-	<< endl
-	<< exc.what()
-	<< endl
-	<< "Aborting!"
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
-      return 1;
-    }
-  catch (...)
-    {
-      cerr
-	<< endl
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
-      cerr
-	<< "Unknown exception!"
-	<< endl
-	<< "Aborting!"
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
-      return 1;
-    }
-  cout
-    << "----------------------------------------------------"
-    << endl
-    << "Apparently everything went fine!"
-    << endl;
-  return 0;
-}
+template class ImmersedFEMGeneralized<2>;
+template class ImmersedFEMGeneralized<3>;
+
