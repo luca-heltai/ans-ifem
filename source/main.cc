@@ -48,7 +48,7 @@
    a careful discussion of the proposed approach see Heltai, L. and
    F. Costanzo (2012), "Variational implementation of immersed finite
    element methods," <i>Computer Methods in Applied Mechanics and
-   Engineering</i>, 229&ndash;232, p. 110&ndash;127, which we will
+   Engineering</i>, 229–232, p. 110–127, which we will
    denoted by [HC2012].  </p>
 
 
@@ -96,7 +96,7 @@ The motion of the system is governed by the following three equations, which, re
 	\nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
 	u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
 @f]
-where &quot;\f$\nabla_{x} \cdot\f$&quot; denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
+where "\f$\nabla_{x} \cdot\f$" denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
 </p>
 
 <p>
@@ -167,7 +167,7 @@ s_{K}: \hat{K} := [0,1]^{d} \mapsto K \in B_{h},
 \quad{\rm and}\quad 
 s + w_{h}: K \mapsto {\rm current~position~of~solid~cell},
 @f]
-where \f$\hat{K}\f$ is the reference unit element and \f$d\f$ is the spatial dimension of the immersed solid.  These maps allow us to determine the global coordinates of the quadrature points. These coordinates are then passed to a search algorithm that identifies the cells in \f$\Omega_{h}\f$ that contain the points in question.  In turn, this identification allows us to evaluate the functions \f$v_h\f$. The overall operation is illustrated in the figure above where we show a cell of \f$B_{h}\f$ straddling four cells of \f$\Omega_{h}\f$ denoted fluid cells  A&ndash;D.  The quadrature points over the solid cell are denoted by filled circles.  The contribution to the above integral due to the solid cell is then computed by summing the partial contributions corresponding to each of the fluid cells intersecting the solid cell in question.  The implementation of an efficient search algorithm responsible for identifying the fluid cells intersecting an individual solid cell is the only technically challenging part of the procedure.  We use the built in facilities of the <code>deal.II</code> library to perform this task. Once the fluid cells containing the quadrature points of a given solid cell are found, we determine the value of \f$v_{h}\f$ at the quadrature points using the interpolation infrastructure inherent in the finite element representation of fields defined over \f$\Omega_{h}\f$.  The <code>deal.II</code> class we use for this implementation is the <code>FEFieldFunction</code>.
+where \f$\hat{K}\f$ is the reference unit element and \f$d\f$ is the spatial dimension of the immersed solid.  These maps allow us to determine the global coordinates of the quadrature points. These coordinates are then passed to a search algorithm that identifies the cells in \f$\Omega_{h}\f$ that contain the points in question.  In turn, this identification allows us to evaluate the functions \f$v_h\f$. The overall operation is illustrated in the figure above where we show a cell of \f$B_{h}\f$ straddling four cells of \f$\Omega_{h}\f$ denoted fluid cells  A–D.  The quadrature points over the solid cell are denoted by filled circles.  The contribution to the above integral due to the solid cell is then computed by summing the partial contributions corresponding to each of the fluid cells intersecting the solid cell in question.  The implementation of an efficient search algorithm responsible for identifying the fluid cells intersecting an individual solid cell is the only technically challenging part of the procedure.  We use the built in facilities of the <code>deal.II</code> library to perform this task. Once the fluid cells containing the quadrature points of a given solid cell are found, we determine the value of \f$v_{h}\f$ at the quadrature points using the interpolation infrastructure inherent in the finite element representation of fields defined over \f$\Omega_{h}\f$.  The <code>deal.II</code> class we use for this implementation is the <code>FEFieldFunction</code>.
 
 <a name="results"></a>
 <h1>Results</h1>

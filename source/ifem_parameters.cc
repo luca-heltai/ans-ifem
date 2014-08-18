@@ -14,6 +14,7 @@
 // information on this license.
 
 #include "ifem_parameters.h"
+#include <iostream>
 #include <fstream>
 
 // Names imported into to the global namespace:
