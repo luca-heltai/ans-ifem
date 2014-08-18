@@ -155,7 +155,6 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
     for (int i=1; i<argc; ++i)
       this->parse_input(argv[i]);
 
-
 // Reading in the parameters.
   this->enter_subsection ("W0");
   W_0.parse_parameters (*this);

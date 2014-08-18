@@ -82,7 +82,7 @@ The fluid is assumed to be Newtonian so that its Cauchy stress is \f$\sigma_{f} 
 <b>Velocity field and Displacement of the Immersed Body.</b>
 The velocity field \f$u(x,t)\f$, with \f$x \in \Omega\f$, represents that velocity of the particle occupying the point \f$x\f$ at time \f$t\f$.  As such, this field describes the velocity of the fluid for \f$x \in \Omega/B_{t}\f$ and the velocity of the solid for \f$x \in B_{t}\f$.  Therefore, using the displacement function \f$w(s,t)\f$, for \f$s \in B\f$ and for al \f$t\f$, we have
 @f[
-  u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t}.
+    u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t}.
 @f]
 </p>
 <p>
@@ -92,9 +92,9 @@ The boundary of the immersed body is viewed as a material surface.  Therefore, t
 <b>Governing Equations: Strong Form.</b>
 The motion of the system is governed by the following three equations, which, respectively, represent the balance of linear momentum, balance of mass accounting for incompressibility, and velocity compatibility:
 @f[
-  \nabla \cdot \sigma(x,t) + \rho b = \rho \biggl[\frac{\partial u(x,t)}{\partial t} + (\nabla u(x,t)) u(x,t) \biggr] \quad {\rm in}~\Omega,\quad
-  \nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
-  u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
+    \nabla \cdot \sigma(x,t) + \rho b = \rho \biggl[\frac{\partial u(x,t)}{\partial t} + (\nabla u(x,t)) u(x,t) \biggr] \quad {\rm in}~\Omega,\quad
+    \nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
+    u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
 @f]
 where "\f$\nabla_{x} \cdot\f$" denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
 </p>

@@ -142,7 +142,7 @@ private:
   bool dgp_for_p;
 
 
-  // This is the <code>FESystem</code> for the immersed domain. 
+  // This is the <code>FESystem</code> for the immersed domain.
 
   FESystem<dim, dim> fe_s;
 
@@ -165,7 +165,7 @@ private:
   // <code>MappingQEulerian</code> object that will support such a
   // description.
 
-  MappingQEulerian<dim, Vector<double>, dim> * mapping;
+  MappingQEulerian<dim, Vector<double>, dim> *mapping;
 
 
   // The quadrature object for the control volume.
@@ -174,10 +174,10 @@ private:
 
 
   // The quadrature object for the immersed domain.
-   
+
   Quadrature<dim> quad_s;
- 
-   
+
+
   // Constraints matrix for the control volume.
 
   ConstraintMatrix constraints_f;
@@ -252,7 +252,7 @@ private:
   Vector<double> tmp_vec_n_total_dofs;
   Vector<double> tmp_vec_n_dofs_up;
   Vector<double> tmp_vec_n_dofs_W;
-   
+
 
   // Matrix to be inverted when solving the problem.
   SparseDirectUMFPACK JF_inv;
@@ -292,7 +292,7 @@ private:
 
   //Vector to store the volume flux due to the point-source
   Vector <double> volume_flux;
-   
+
 
   // Area of the control volume.
   double area;
@@ -302,24 +302,24 @@ private:
   // about the fluid flux, area and the centroid of the immersed domain
   // over time.
   ofstream global_info_file;
- 
+
   // File stream that is used to output a file containing information
-  // about the tip displacement of the flag in the Turek-Hron FSI Benchmark   
+  // about the tip displacement of the flag in the Turek-Hron FSI Benchmark
   ofstream fsi_bm_out_file;
 
-   
+
   //Variable to store the current_time;
   double current_time;
-   
-   
+
+
   //Variable to store the time step
   unsigned int time_step;
-   
-   
+
+
   // Variable to store time step size
   double dt;
-   
-   
+
+
   //The following be necessary for serialization purposes
   friend class boost::serialization::access;
 
@@ -330,102 +330,103 @@ private:
   void create_triangulation_and_dofs ();
 
   void apply_constraints (vector<double> &local_res,
-			  FullMatrix<double> &local_jacobian,
-			  const Vector<double> &local_up,
-			  const vector<unsigned int> &dofs,
-			  unsigned int offset);
+                          FullMatrix<double> &local_jacobian,
+                          const Vector<double> &local_up,
+                          const vector<unsigned int> &dofs,
+                          unsigned int offset);
 
   void compute_current_bc (const double time);
 
   void apply_current_bc (
-			 BlockVector<double> &vec,
-			 const double time);
+    BlockVector<double> &vec,
+    const double time);
 
   void assemble_sparsity (Mapping<dim, dim> &mapping);
 
   void  get_area_and_first_pressure_dof ();
 
   void residual_and_or_Jacobian (
-				 BlockVector<double> &residual,
-				 BlockSparseMatrix<double> &Jacobian,
-				 const BlockVector<double> &xit,
-				 const BlockVector<double> &xi,
-				 const double alpha,
-				 const double t
-				 );
+    BlockVector<double> &residual,
+    BlockSparseMatrix<double> &Jacobian,
+    const BlockVector<double> &xit,
+    const BlockVector<double> &xi,
+    const double alpha,
+    const double t
+  );
 
   void distribute_residual (
-			    Vector<double> &residual,
-			    const vector<double> &local_res,
-			    const vector<unsigned int> &dofs_1,
-			    const unsigned int offset_1
-			    );
+    Vector<double> &residual,
+    const vector<double> &local_res,
+    const vector<unsigned int> &dofs_1,
+    const unsigned int offset_1
+  );
 
   void distribute_jacobian (
-			    SparseMatrix<double> &Jacobian,
-			    const FullMatrix<double> &local_Jac,
-			    const vector<unsigned int> &dofs_1,
-			    const vector<unsigned int> &dofs_2,
-			    const unsigned int offset_1,
-			    const unsigned int offset_2
-			    );
+    SparseMatrix<double> &Jacobian,
+    const FullMatrix<double> &local_Jac,
+    const vector<unsigned int> &dofs_1,
+    const vector<unsigned int> &dofs_2,
+    const unsigned int offset_1,
+    const unsigned int offset_2
+  );
 
   void distribute_constraint_on_pressure (
-					  Vector<double> &residual,
-					  const double average_pressure
-					  );
+    Vector<double> &residual,
+    const double average_pressure
+  );
 
   void distribute_constraint_on_pressure (
-					  SparseMatrix<double> &jacobian,
-					  const vector<double> &pressure_coefficient,
-					  const vector<unsigned int> &dofs,
-					  const unsigned int offset
-					  );
+    SparseMatrix<double> &jacobian,
+    const vector<double> &pressure_coefficient,
+    const vector<unsigned int> &dofs,
+    const unsigned int offset
+  );
 
   void localize (
-		 Vector<double> &local_M_gamma3_inv_A_gamma,
-		 const Vector<double> &M_gamma3_inv_A_gamma,
-		 const vector<unsigned int> &dofs
-		 );
+    Vector<double> &local_M_gamma3_inv_A_gamma,
+    const Vector<double> &M_gamma3_inv_A_gamma,
+    const vector<unsigned int> &dofs
+  );
 
   void get_Agamma_values (
-			  const FEValues<dim,dim> &fe_v_s,
-			  const vector< unsigned int > &dofs,
-			  const Vector<double> &xi,
-			  Vector<double> &local_A_gamma
-			  );
+    const FEValues<dim,dim> &fe_v_s,
+    const vector< unsigned int > &dofs,
+    const Vector<double> &xi,
+    Vector<double> &local_A_gamma
+  );
 
   template <class FEVal>
   void get_Pe_F_and_DPeFT_dxi_values (
-				      const FEVal &fe_v_s,
-				      const vector< unsigned int > &dofs,
-				      const Vector<double> &xi,
-				      const bool update_jacobian,
-				      vector<Tensor<2,dim,double> > &Pe,
-				      vector<Tensor<2,dim,double> > &F,
-				      vector< vector<Tensor<2,dim,double> > > & DPe_dxi
-				      );
+    const FEVal &fe_v_s,
+    const vector< unsigned int > &dofs,
+    const Vector<double> &xi,
+    const bool update_jacobian,
+    vector<Tensor<2,dim,double> > &Pe,
+    vector<Tensor<2,dim,double> > &F,
+    vector< vector<Tensor<2,dim,double> > > &DPe_dxi
+  );
 
   void get_inverse_transpose (
-			      const vector < Tensor <2, dim> > &F,
-			      vector < Tensor <2, dim> > &local_invFT
-			      );
-   
+    const vector < Tensor <2, dim> > &F,
+    vector < Tensor <2, dim> > &local_invFT
+  );
+
   void get_volume_flux_vector (const double t);
-   
+
   void calculate_error () const;
 
-  unsigned int n_dofs() const {
+  unsigned int n_dofs() const
+  {
     return n_total_dofs;
   };
 
   void output_step (
-		    const double t,
-		    const BlockVector<double> &solution,
-		    const unsigned int step_number,
-		    const double h,
-		    const bool _output = false
-		    );
+    const double t,
+    const BlockVector<double> &solution,
+    const unsigned int step_number,
+    const double h,
+    const bool _output = false
+  );
 
   template<class Type>
   inline void set_to_zero (Type &v) const;
@@ -437,16 +438,16 @@ private:
   inline void set_to_zero(vector<Type> &v) const;
 
   double norm(const vector<double> &v);
-   
+
   void fsi_bm_postprocess();
-   
+
   void fsi_bm_postprocess2();
-   
+
   template <class Archive>
   void serialize(Archive &ar, const unsigned int version);
-   
+
   void restart_computations();
-   
+
   void save_for_restart();
 
 };

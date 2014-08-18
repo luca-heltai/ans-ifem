@@ -299,10 +299,8 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
   mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
                                                             dh_s, previous_xi.block(1));
 
-
 // We now deal with the sparsity patterns.
   {
-
     BlockDynamicSparsityPattern csp (2,2);
 
     csp.block(0,0).reinit (n_dofs_up, n_dofs_up);
@@ -1742,7 +1740,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
             }
           break;
         case IFEMParameters<dim>::CircumferentialFiberModel:
-          p = Point<dim>(fe_v_s.quadrature_point(qs) - par.ring_center);
+          p = fe_v_s.quadrature_point(qs) - par.ring_center;
 
 // Find the unit vector along the tangential direction
           etheta[0]=-p[1]/p.norm();
