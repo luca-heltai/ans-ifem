@@ -6,12 +6,29 @@ FIND_PACKAGE(deal.II 8.0
     HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
     REQUIRED
   )
+
+LIST(APPEND CMAKE_MODULE_PATH
+  ${CMAKE_SOURCE_DIR}/cmake/
+  ${CMAKE_SOURCE_DIR}/cmake/modules/
+  )
+
+
+INCLUDE(setup_external_macros)
+FILE(GLOB _macro_files "cmake/macros/*.cmake")
+FOREACH(_file ${_macro_files})
+  INCLUDE(${_file})
+ENDFOREACH()
+
+ADD_SUBDIRECTORY(tests)
+
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 FILE(GLOB TARGET_SRC source/*cc include/*.h)
 INCLUDE_DIRECTORIES("include/")
 PROJECT(${TARGET})
 ADD_EXECUTABLE(${TARGET} ${TARGET_SRC})
+
+
 DEAL_II_SETUP_TARGET(${TARGET})
 
 #-- Add an Option to toggle the generation of the API documentation
