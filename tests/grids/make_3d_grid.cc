@@ -37,4 +37,6 @@ main()
   
   GridOut go;
   go.write_msh(final_tria, deallog.get_file_stream());
+  // std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d.msh");
+  // go.write_msh(final_tria, ofile);  
 }
