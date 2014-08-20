@@ -73,6 +73,8 @@ main()
 				      tria_isotropic);
   
   GridOut go;
+  GridOutFlags::Msh flags(true, true);
+  go.set_flags(flags);
   go.write_msh(tria, deallog.get_file_stream());
   go.write_msh(tria_isotropic, deallog.get_file_stream());
   std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d.msh");
