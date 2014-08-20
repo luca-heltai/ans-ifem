@@ -16,7 +16,7 @@ main()
   Triangulation<3,3> tria;
   GridIn<3,3> gi;
   gi.attach_triangulation(tria);
-  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d.msh");
+  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_isotropic.msh");
   gi.read_msh(infile);
   
   Triangulation<3,3>::active_cell_iterator
@@ -32,7 +32,7 @@ main()
 		  << ", face center: " << cell->face(f)->center() 
 		  << std::endl;
 	}
-	else if(std::abs(cell->face(f)->center()[0] - 25.0)<1e-9) {
+	else if(std::abs(cell->face(f)->center()[0] - 25.0)<1e-9) { // x=25
 	  cell->face(f)->set_boundary_indicator(2); // 2 = outflow
 	  deallog << "Outflow: " << cell->face(f) 
 		  << ", face center: " << cell->face(f)->center() 
@@ -45,6 +45,6 @@ main()
   GridOutFlags::Msh flags(true, true);
   go.set_flags(flags);
   go.write_msh(tria, deallog.get_file_stream());
-  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_id.msh");
+  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_isotropic_id.msh");
   go.write_msh(tria, ofile);  
 }

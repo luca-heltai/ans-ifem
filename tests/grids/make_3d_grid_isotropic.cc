@@ -17,7 +17,7 @@ main()
   
   GridIn<2,2> gi;
   gi.attach_triangulation(tria_2d);
-  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_2d.msh");  
+  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_2d_isotropic.msh");  
   gi.read_msh(infile);
 
   Triangulation<3,3> smaller_slice, larger_slice;
@@ -44,6 +44,6 @@ main()
   GridOutFlags::Msh flags(true, true);
   go.set_flags(flags);
   go.write_msh(tria, deallog.get_file_stream());
-  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d.msh");
+  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_isotropic.msh");
   go.write_msh(tria, ofile);  
 }
