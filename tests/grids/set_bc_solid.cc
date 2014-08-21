@@ -16,7 +16,7 @@ main()
   Triangulation<3,3> tria;
   GridIn<3,3> gi;
   gi.attach_triangulation(tria);
-  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d.msh");
+  std::ifstream infile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_solid.msh");
   gi.read_msh(infile);
   
   Triangulation<3,3>::active_cell_iterator
@@ -33,8 +33,8 @@ main()
 	// 	  << std::endl;
 	// }
 	// else
-	  if(std::abs(cell->face(f)->center()[0] - 25.0)<1e-9) {
-	  cell->face(f)->set_boundary_indicator(1); // 2 = outflow
+	  if(std::abs(cell->face(f)->center()[0] - 5.5)>1e-9) {
+	  cell->face(f)->set_boundary_indicator(1); // 0 = fixed bc, 1 = neumann
 	  deallog << "Outflow: " << cell->face(f) 
 		  << ", face center: " << cell->face(f)->center() 
 		  << std::endl;
@@ -46,6 +46,6 @@ main()
   GridOutFlags::Msh flags(true, true);
   go.set_flags(flags);
   go.write_msh(tria, deallog.get_file_stream());
-  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_id.msh");
+  std::ofstream ofile(SOURCE_DIR "/../../meshes/SchaeferTurek_3d_solid_id.msh");
   go.write_msh(tria, ofile);  
 }

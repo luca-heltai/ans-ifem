@@ -26,14 +26,15 @@ main()
   for(; cell != endc; ++cell) {
     for(unsigned int f=0; f < GeometryInfo<3>::faces_per_cell; ++f)
       if(cell->face(f)->at_boundary()) {
-	if(std::abs(cell->face(f)->center()[0])<1e-10) {// x=0 
-	  cell->face(f)->set_boundary_indicator(1); // 1 = inflow
-	  deallog << "Inflow: " << cell->face(f) 
-		  << ", face center: " << cell->face(f)->center() 
-		  << std::endl;
-	}
-	else if(std::abs(cell->face(f)->center()[0] - 25.0)<1e-9) { // x=25
-	  cell->face(f)->set_boundary_indicator(2); // 2 = outflow
+	// if(std::abs(cell->face(f)->center()[0])<1e-10) {// x=0 
+	//   cell->face(f)->set_boundary_indicator(1); // 1 = inflow
+	//   deallog << "Inflow: " << cell->face(f) 
+	// 	  << ", face center: " << cell->face(f)->center() 
+	// 	  << std::endl;
+	// }
+	// else
+	  if(std::abs(cell->face(f)->center()[0] - 25.0)<1e-9) { // x=25
+	  cell->face(f)->set_boundary_indicator(1); // 1 = outflow
 	  deallog << "Outflow: " << cell->face(f) 
 		  << ", face center: " << cell->face(f)->center() 
 		  << std::endl;

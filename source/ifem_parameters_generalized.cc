@@ -458,9 +458,8 @@ IFEMParametersGeneralized<dim>::IFEMParametersGeneralized(int argc, char **argv)
       if (use_dbc_solid)
         boundary_map_solid[81] = &zero_solid;
     }
-  if (cfd_test && use_dbc_solid)
+  if (use_dbc_solid)
     boundary_map_solid[0] = &zero_solid;
-
 
   this->enter_subsection("Grid parameters for brain mesh");
   //:

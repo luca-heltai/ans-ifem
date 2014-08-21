@@ -70,6 +70,13 @@ ImmersedFEM<dim>::~ImmersedFEM ()
 
 template <int dim>
 void
+
+
+
+
+
+
+
 ImmersedFEM<dim>::compute_current_bc (const double t)
 {
   par.u_g.set_time(t);
@@ -152,7 +159,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 
         // A grid in ucd format is expected.
-        grid_in_f.read_ucd (file);
+        grid_in_f.read_msh (file);
       }
 
       GridIn<dim, dim> grid_in_s;

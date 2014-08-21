@@ -229,7 +229,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 
         // A grid in ucd format is expected.
-        grid_in_f.read_ucd (file);
+        grid_in_f.read_msh (file);
       }
 
       GridIn<dim, dim> grid_in_s;
@@ -239,7 +239,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
       Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
 
 // A grid in ucd format is expected.
-      grid_in_s.read_ucd (file);
+      grid_in_s.read_msh (file);
     }
 
   if (par.fsi_bm)
