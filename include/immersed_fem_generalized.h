@@ -65,6 +65,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <map>
 #include <cmath>
 #include <typeinfo>
@@ -73,12 +74,13 @@
 #include "ifem_parameters_generalized.h"
 #include "exact_solution_ring_with_fibers.h"
 
+using namespace std;
 
 //! This class defines simulations objects. The only method in the public
 //! interface is <code>run()</code>, which is invoked to carry out the
 //! simulation.
 template <int dim>
-class ImmersedFEMGeneralized
+class ImmersedFEMGeneralized 
 {
 public:
 
@@ -271,7 +273,7 @@ private:
 
 
   // A container to store the dofs corresponding to the pressure field.
-  set<unsigned int> pressure_dofs;
+  std::set<unsigned int> pressure_dofs;
 
 
   // Storage for the elasticity operator of the immersed domain.

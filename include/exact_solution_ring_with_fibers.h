@@ -15,7 +15,7 @@
 #ifndef exact_solution_ring_with_fibers_h
 #define exact_solution_ring_with_fibers_h
 
-#include "ifem_parameters.h"
+#include "ifem_parameters_generalized.h"
 #include <deal.II/base/point.h>
 #include <deal.II/lac/vector.h>
 
@@ -45,7 +45,7 @@ public:
 //! initialized by assigning the simulation parameters, which are
 //! elements of objects of type <code>IFEMParameters</code>.
 
-  ExactSolutionRingWithFibers (IFEMParameters<dim> &par);
+  ExactSolutionRingWithFibers (IFEMParametersGeneralized<dim> &par);
 
   void vector_value (const Point <dim> &p,
                      Vector <double> &values) const;
@@ -71,7 +71,7 @@ public:
 
 private:
 
-  IFEMParameters<dim> &par;
+  IFEMParametersGeneralized<dim> &par;
 };
 
 #endif

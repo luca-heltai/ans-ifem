@@ -255,9 +255,7 @@ where we have used the following parameters: \f$\rho=1.0\,{\rm kg}/{\rm m}^3\f$,
 
  */
 
-#include "immersed_fem.h"
 #include "immersed_fem_generalized.h"
-#include "ifem_parameters.h"
 #include "ifem_parameters_generalized.h"
 
 using namespace std;

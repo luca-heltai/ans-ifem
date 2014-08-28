@@ -8,7 +8,6 @@
 
 template <int dim>
 IFEMParametersGeneralized<dim>::IFEMParametersGeneralized(int argc, char **argv) :
-  IFEMParameters<dim>(argc,argv),
   W_0(dim),
   u_0(dim+1),
   u_g(dim+1),

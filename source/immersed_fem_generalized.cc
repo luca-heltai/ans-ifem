@@ -515,7 +515,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 // they are related to the first pressure dof.
     if (par.all_DBC && !par.solid_is_compressible)
       {
-        set<unsigned int>::iterator it = pressure_dofs.begin();
+	std::set<unsigned int>::iterator it = pressure_dofs.begin();
         for (++it; it != pressure_dofs.end(); ++it)
           {
             csp.block(0,0).add(constraining_dof, *it);
@@ -2284,7 +2284,18 @@ ImmersedFEMGeneralized<dim>::output_step
   global_info_file
       << t
       << " ";
-
+  {
+    std::ofstream fluid_binary_file( (par.output_name + "-fluid-" +
+				      Utilities::int_to_string (step, 5) +
+				      ".bin").c_str() );
+    solution.block(0).block_write(fluid_binary_file);
+    
+    std::ofstream solid_binary_file( ( par.output_name + "-solid-" +
+				       Utilities::int_to_string (step, 5) +
+				       ".bin").c_str() );
+    solution.block(1).block_write(solid_binary_file);
+  }
+    
   if ((step % par.output_interval==0) || (_output))
     {
       {
@@ -3525,6 +3536,475 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
       << drag_lift_cyl[1] + drag_lift_flag_avg[1] //: Lift based on avg. of the traction at the interface
       <<endl;
 }
+
+// template<int dim, int spacedim>
+// std::vector<unsigned int> get_point_dofs(const DoFHandler<dim,spacedim> &dh, 
+// 					 const Point<spacedim> &p,
+// 					 const Mapping<dim,spacedim> &mapping=StaticMappingQ1::mapping,
+// 					 const double tol=1e-10) {
+//   std::vector< Point<spacedim> > support_points(dh.n_dofs());
+//   DoFTools::map_dofs_to_support_points(mapping, dh, support_points);
+//   std::vector<unsigned int> dofs;
+//   const double rel_tol=std::max(tol, tol*p.norm());
+//   for(unsigned int i=0; i<support_points.size(); ++i)
+//     if(support_points[i].distance(p) < rel_tol)
+//       dofs.push_back[i];
+//   return dofs;
+// }
+
+
+// //Calculation and output of tip displacement of the flag and lift-drag on the
+// // cylinder+flag in the Turek-Hron FSI benchmark test
+// template <>
+// void ImmersedFEMGeneralized<3>::fsi_bm_postprocess()
+// {
+//   const int dim = 3;
+//   //: Some geometric features of the benchmark test(s)
+//   const Point<dim> center_cyl (5.0, 2.0, 2.05); //: Center of the cylinder
+//   const double D_cyl = 1; //: Diameter of the cylinder
+//   const double H = 4.1; //: Height of the channel
+//   const double l_flag = 3; //: Length of the flag
+//   const double w_flag = 1.37; //: Length of the flag
+
+//   //Compute the the displacement of the pt. A (the corner of the flag)
+//   Point<dim> point_A (8.5, 2.5, (H+w_flag)/2.0 );
+//   Vector<double> disp_A (dim);
+//   Vector<double> sol_B (dim+1);
+//   double pressure_A = 0.0;
+//   double U_avg = 0.0;
+//   double c_D = 0.0;
+//   double c_L = 0.;
+  
+//   static std::vector<unsigned int> corner_dofs=get_point_dofs(dh_s, point_A);
+//   AssertDimension(corner_dofs.size(), dim);
+
+
+//   //-------------------- Loop over FLUID CELLS-----------------//
+//   //Calculating the drag and lift values corresponding to the free surface of the cylinder
+
+//   typename DoFHandler<dim,dim>::active_cell_iterator
+//   cell = dh_f.begin_active(), endc = dh_f.end();
+
+//   QGauss <dim-1> quad_face (par.degree+2);
+//   unsigned int n_qpf = quad_face.size();
+
+//   FEFaceValues<dim> fe_f_face_v (fe_f, quad_face,
+//                                  update_values | update_gradients |
+//                                  update_normal_vectors |
+//                                  update_quadrature_points |
+//                                  update_JxW_values);
+
+//   unsigned int n_dofs = fe_f.dofs_per_cell;
+//   vector <unsigned int> dofs_f (n_dofs);
+
+//   vector < Vector <double> > sol_f (n_qpf, Vector <double> (dim+1));
+//   vector < vector< Tensor <1, dim> > > sol_grad_f (n_qpf, vector< Tensor <1,dim> > (dim+1));
+
+//   Tensor < 1, dim > drag_lift_cyl;
+//   Tensor < 1, dim > drag_lift_flag_f;
+//   Tensor < 1, dim > drag_lift_flag_s;
+//   Tensor < 1, dim > drag_lift_flag_avg;
+
+
+//   //: Variables needed for Turek-style calculations
+//   double gradn_u_t;
+//   Point<dim> normal_vector;
+//   Point<dim> tangent_vector;
+//   vector <double> drag_lift_turekstyle(dim);
+//   double c_L_turekstyle = 0.;
+//   double c_D_turekstyle = 0.;
+//   //:-----------------------
+//   unsigned int c_no = 0;
+//   for (; cell !=endc; ++cell, ++c_no)
+//     {
+//       for (unsigned int face=0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+//         {
+//           if (cell->face(face)->at_boundary()
+//               && (cell->face(face)->boundary_indicator() == 80
+//                   || (par.cfd_test && cell->face(face)->boundary_indicator() == 81)
+//                  )
+//              )
+//             {
+//               cell->get_dof_indices (dofs_f);
+
+//               fe_f_face_v.reinit (cell, face);
+
+//               fe_f_face_v.get_function_values (current_xi.block(0), sol_f);
+//               fe_f_face_v.get_function_gradients (current_xi.block(0), sol_grad_f);
+
+//               for (unsigned int q = 0; q < n_qpf; ++q) //loop over quadrature pts
+//                 {
+//                   for (unsigned int i = 0; i < dim; ++i) //loop over dim
+//                     for (unsigned int j = 0; j < dim; ++j) //loop over dim
+//                       drag_lift_cyl[i] += //(T_f - p I)*(-n da) //-n since +n is outward wrt solid cell boundary
+//                         (par.eta_f
+//                          *(sol_grad_f[q][i][j]
+//                            + sol_grad_f[q][j][i])
+//                          - (i == j ? sol_f[q](dim) : 0.0)
+//                         )
+//                         *(-fe_f_face_v.normal_vector(q)(j))
+//                         *fe_f_face_v.JxW(q);
+//                   //Turek-style calculations to follow:
+//                   normal_vector = -fe_f_face_v.normal_vector(q);
+//                   tangent_vector[0] = normal_vector[1];
+//                   tangent_vector[1] = -normal_vector[0];
+//                   gradn_u_t = 0.0;
+//                   for (unsigned int i = 0; i < dim; ++i)
+//                     gradn_u_t +=tangent_vector[i]
+//                                 *(sol_grad_f[q][i]
+//                                   *normal_vector);
+
+//                   drag_lift_turekstyle[0] += (-sol_f[q](dim)
+//                                               * normal_vector[0]
+//                                               + par.eta_f
+//                                               * gradn_u_t
+//                                               * normal_vector[1])
+//                                              *fe_f_face_v.JxW(q);
+//                   drag_lift_turekstyle[1] += (-sol_f[q](dim)
+//                                               * normal_vector[1]
+//                                               - par.eta_f
+//                                               * gradn_u_t
+//                                               * normal_vector[0])
+//                                              *fe_f_face_v.JxW(q);
+
+//                 }//loop over q
+//             }//if cond.
+//         }//loop over faces
+//     }//loop over cell
+
+//   ///-------------------- Loop over FLUID CELLS (end)-----------------//
+//   if (par.cfd_test && (abs(U_avg)>1e-8))
+//     {
+//       c_D = (2./(par.rho_f*D_cyl))*(drag_lift_cyl[0]/U_avg)/ U_avg;
+//       c_L = (2./(par.rho_f*D_cyl))*(drag_lift_cyl[1]/U_avg)/ U_avg;
+
+//       c_D_turekstyle = (2./(par.rho_f*D_cyl))*(drag_lift_turekstyle[0]/U_avg)/ U_avg;
+//       c_L_turekstyle = (2./(par.rho_f*D_cyl))*(drag_lift_turekstyle[1]/U_avg)/ U_avg;
+
+//     }
+//   else //: if the regular FSI BM test is being performed
+//     {
+//       //We find the solid cell in which point A resides and then
+//       //associate a quadrature point with point A. Note a quadrature point can only
+//       //lie in a unit cell.
+//       const pair<typename DoFHandler<dim, dim>::active_cell_iterator, Point<dim> > cell_and_point
+//         = GridTools::find_active_cell_around_point (StaticMappingQ1<dim, dim>::mapping,
+//                                                     dh_s,
+//                                                     point_A);
+
+//       typename DoFHandler<dim, dim>::active_cell_iterator cell_having_point_A = cell_and_point.first;
+//       Point<dim> unit_cell_point_A = GeometryInfo<dim>::project_to_unit_cell(cell_and_point.second);
+
+
+//       Quadrature<dim> quad_point_A (unit_cell_point_A);
+
+//       FEFieldFunction<dim, DoFHandler<dim>, Vector<double> > up_field (dh_f,
+//           current_xi.block(0));
+
+//       QIterated<dim-1> quad_face_s (QMidpoint<1>(), 5);
+
+//       vector <typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+//       vector <vector<Point<dim> > > fluid_qpoints;
+//       vector< vector<unsigned int > > fluid_maps;
+
+//       FEFaceValues <dim, dim> fe_s_face_v (fe_s,
+//                                            quad_face_s,
+//                                            update_values |
+//                                            update_gradients |
+//                                            update_normal_vectors |
+//                                            update_quadrature_points |
+//                                            update_JxW_values);
+
+//       FEValues <dim, dim> fe_s_v_mapped_point_A (*mapping,
+//                                                  fe_s,
+//                                                  quad_point_A,
+//                                                  update_quadrature_points);
+
+//       FEFaceValues <dim, dim> fe_s_face_v_mapped (*mapping,
+//                                                   fe_s,
+//                                                   quad_face_s,
+//                                                   update_quadrature_points);
+
+//       FEValues <dim, dim> fe_s_v (fe_s,
+//                                   quad_s,
+//                                   update_values |
+//                                   update_JxW_values);
+
+//       FEValues <dim, dim> fe_s_v_mapped (*mapping,
+//                                          fe_s,
+//                                          quad_s,
+//                                          update_quadrature_points);
+
+
+//       //Calculation of the drag-lift over the flag based on Cauchy stress in fluid...
+//       unsigned int n_dofs_s = fe_s.dofs_per_cell;
+//       vector <unsigned int> dofs_s (n_dofs_s);
+//       unsigned int n_qps = quad_face_s.size();
+
+//       vector < vector< Tensor <1, dim> > > sol_grad_s (n_qps, vector< Tensor <1,dim> > (dim));
+
+//       vector< Tensor <1, dim> > flag_sum_traction_s_e (n_qps);
+//       vector< Tensor <1, dim> > flag_sum_traction_s_inc(n_qps);
+//       Tensor <1, dim> flag_sum_traction_s_inc2;
+//       Tensor <1, dim> flag_sum_traction_s_v;
+//       Tensor <1, dim> flag_sum_traction_f;
+//       Tensor <1, dim> flag_sum_traction_s;
+
+
+//       vector < Vector <double> > projected_p (n_qps, Vector <double> (dim));
+
+//       vector<Tensor<2,dim,double> > Pe(n_qps, Tensor<2,dim,double>());
+//       vector< vector<Tensor<2,dim,double> > > DPeFT_dxi;
+
+//       vector<Tensor<2,dim,double> > F(n_qps, Tensor<2,dim,double>());
+//       vector<Tensor<2,dim,double> > inv_FT(n_qps, Tensor<2,dim,double>());
+//       Vector<double> det_F(n_qps);
+
+//       set_to_zero(tmp_vec_n_dofs_W);
+//       typename DoFHandler<dim,dim>::active_cell_iterator
+//       cell_s = dh_s.begin_active(), endc_s = dh_s.end();
+
+//       //The following segment of code is used to find the L2-projection of the
+//       //field p on to the solid domain.
+//       for (; cell_s != endc_s; ++cell_s)
+//         {
+//           cell_s->get_dof_indices (dofs_s);
+
+//           fe_s_v_mapped.reinit(cell_s);
+//           fe_s_v.reinit(cell_s);
+
+//           up_field.compute_point_locations (fe_s_v_mapped.get_quadrature_points(),
+//                                             fluid_cells,
+//                                             fluid_qpoints,
+//                                             fluid_maps);
+
+//           for (unsigned int c=0; c<fluid_cells.size(); ++c)
+//             {
+//               Quadrature<dim> local_quad (fluid_qpoints[c]);
+//               FEValues<dim> local_fe_f_v (fe_f,
+//                                           local_quad,
+//                                           update_values |
+//                                           update_gradients);
+
+//               local_fe_f_v.reinit(fluid_cells[c]);
+
+//               set_to_zero(sol_f);
+//               sol_f.resize (local_quad.size(), Vector<double>(dim+1));
+//               local_fe_f_v.get_function_values (current_xi.block(0),
+//                                                 sol_f);
+
+//               for (unsigned int q=0; q<local_quad.size(); ++q)
+//                 {
+//                   unsigned int &qs = fluid_maps[c][q];
+
+//                   for (unsigned int i=0; i < n_dofs_s; ++i)
+//                     tmp_vec_n_dofs_W (dofs_s[i]) +=
+//                       fe_s_v.shape_value(i, qs)
+//                       * sol_f[q](dim)
+//                       * fe_s_v.JxW(qs);
+
+//                 }
+
+//             }
+
+//         }
+
+//       M_gamma3_inv.solve(tmp_vec_n_dofs_W);
+
+// //The actual calculations of the drag and the lift on the flag are done in the
+// //following section of the code:
+//       for (cell_s = dh_s.begin_active(); cell_s != endc_s; ++cell_s)
+//         {
+//           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
+//             {
+//               if (cell_s->face(face)->at_boundary() && (cell_s->face(face)->boundary_indicator() !=81))
+//                 {
+//                   cell_s->get_dof_indices(dofs_s);
+
+//                   fe_s_face_v.reinit (cell_s, face);
+
+//                   fe_s_face_v.get_function_values (tmp_vec_n_dofs_W,
+//                                                    projected_p);
+
+//                   fe_s_face_v.get_function_gradients (current_xi.block(1),
+//                                                       sol_grad_s);
+
+//                   //Contribution due to the elastic stress of the solid--------
+//                   get_Pe_F_and_DPeFT_dxi_values (fe_s_face_v,
+//                                                  dofs_s,
+//                                                  current_xi.block(1),
+//                                                  false,
+//                                                  Pe,
+//                                                  F,
+//                                                  DPeFT_dxi);
+
+//                   for (unsigned int qs = 0; qs < n_qps; ++qs)
+//                     {
+//                       det_F(qs) = determinant(F[qs]);
+//                       inv_FT[qs] = transpose(invert(F[qs]));
+
+//                       flag_sum_traction_s_e[qs] = //Pe*N
+//                         (Pe[qs]
+//                          *fe_s_face_v.normal_vector(qs))
+//                         *fe_s_face_v.JxW(qs);
+
+//                       //Using the projected value of p
+//                       if (!par.solid_is_compressible)
+//                         flag_sum_traction_s_inc[qs] = //(- p_projected I)*(J F^(-T) N dA)
+//                           - projected_p[qs](0)
+//                           * det_F(qs)
+//                           * (inv_FT[qs]
+//                              * fe_s_face_v.normal_vector(qs))
+//                           * fe_s_face_v.JxW(qs);
+//                     }
+
+//                   fe_s_face_v_mapped.reinit(cell_s, face);
+
+//                   up_field.compute_point_locations (fe_s_face_v_mapped.get_quadrature_points(),
+//                                                     fluid_cells,
+//                                                     fluid_qpoints,
+//                                                     fluid_maps);
+
+//                   for (unsigned int c=0; c<fluid_cells.size(); ++c)
+//                     {
+//                       Quadrature<dim> local_quad (fluid_qpoints[c]);
+//                       FEValues<dim> local_fe_f_v (fe_f,
+//                                                   local_quad,
+//                                                   update_values |
+//                                                   update_gradients);
+
+//                       local_fe_f_v.reinit(fluid_cells[c]);
+
+//                       set_to_zero(sol_f);
+//                       sol_f.resize (local_quad.size(), Vector<double>(dim+1));
+//                       local_fe_f_v.get_function_values (current_xi.block(0),
+//                                                         sol_f);
+
+
+//                       set_to_zero(sol_grad_f);
+//                       sol_grad_f.resize (local_quad.size(),
+//                                          vector< Tensor<1,dim> >(dim+1)
+//                                         );
+//                       local_fe_f_v.get_function_gradients (current_xi.block(0),
+//                                                            sol_grad_f);
+
+
+//                       for (unsigned int q=0; q<local_quad.size(); ++q)
+//                         {
+//                           unsigned int &qs = fluid_maps[c][q];
+
+//                           flag_sum_traction_f = 0.0;
+//                           flag_sum_traction_s_v = 0.0;
+//                           flag_sum_traction_s_inc2 = 0.0;
+
+//                           for (unsigned int i = 0; i < dim; ++i)
+//                             {
+//                               for (unsigned int j = 0; j < dim; ++j)
+//                                 {
+//                                   flag_sum_traction_f[i] += //(T_f - p I)*(J F^(-T) N dA)
+//                                     (par.eta_f
+//                                      *(sol_grad_f[q][i][j]
+//                                        + sol_grad_f[q][j][i])
+//                                      - (i == j ? sol_f[q](dim): 0.0)
+//                                     )
+//                                     *det_F(qs)
+//                                     * (inv_FT[qs]
+//                                        *fe_s_face_v.normal_vector(qs))[j]
+//                                     *fe_s_face_v.JxW(qs);
+
+//                                   flag_sum_traction_s_v[i] += //T_s*(J F^(-T) N dA)
+//                                     par.eta_s
+//                                     *(sol_grad_f[q][i][j]
+//                                       + sol_grad_f[q][j][i])
+//                                     *det_F(qs)
+//                                     * (inv_FT[qs]
+//                                        *fe_s_face_v.normal_vector(qs))[j]
+//                                     *fe_s_face_v.JxW(qs);
+//                                 }
+
+//                               /*  if(!par.solid_is_compressible)
+//                                   flag_sum_traction_s_inc2[i] = //(- p I)*(J F^(-T) N dA)
+//                                      - sol_f[q](dim)
+//                                      * det_F(qs)
+//                                      * (inv_FT[qs]
+//                                      * fe_s_face_v.normal_vector(qs))[i]
+//                                      * fe_s_face_v.JxW(qs);
+//                                */
+
+//                             }
+
+//                           flag_sum_traction_s = flag_sum_traction_s_v
+//                                                 + flag_sum_traction_s_inc[qs]
+//                                                 + flag_sum_traction_s_e[qs];
+
+//                           drag_lift_flag_f += flag_sum_traction_f;
+//                           drag_lift_flag_s += flag_sum_traction_s;
+
+//                           drag_lift_flag_avg += 0.5*( flag_sum_traction_f + flag_sum_traction_s);
+
+//                         }
+
+//                     }
+
+//                   //--------------------------------------------------------------//
+//                   //-------        CALCULATION OF PRESSURE AT POINT A ------------//
+//                   //--------------------------------------------------------------//
+//                   //Calculate the pressure at point A & the viscous stress (if any)
+//                   if (cell_s == cell_having_point_A)
+//                     {
+//                       fe_s_v_mapped_point_A.reinit(cell_s);
+
+//                       up_field.compute_point_locations (fe_s_v_mapped_point_A.get_quadrature_points(),
+//                                                         fluid_cells,
+//                                                         fluid_qpoints,
+//                                                         fluid_maps);
+
+//                       Assert(fluid_cells.size() == 1, ExcMessage("Mapped point A found in multiple fluid cells!"));
+//                       Quadrature<dim> quad_bg (fluid_qpoints[0]);
+
+//                       FEValues<dim> fe_v_bg (fe_f, quad_bg,
+//                                              update_values | update_gradients);
+//                       fe_v_bg.reinit(fluid_cells[0]);
+
+//                       //Localize the solution for the obtained fluid cell...but before that, resize the vectors
+//                       sol_f.resize(1, Vector <double> (dim+1));
+
+//                       fe_v_bg.get_function_values (current_xi.block(0), sol_f);
+//                       pressure_A = sol_f[0](dim);
+
+//                     }
+
+//                 }//if face of solid cell is at the boundary
+//             }//loop over faces of solid cells
+//         }//End loop over solid cells
+//     }//For FSI test only
+  
+//   fsi_bm_out_file.unsetf(ios_base::floatfield);
+//   fsi_bm_out_file
+//       << current_time
+//       << "\t"
+//       << scientific
+//       << (par.cfd_test ? c_D_turekstyle : disp_A(0))
+//       << "\t"
+//       << (par.cfd_test ? c_L_turekstyle : disp_A(1))
+//       << "\t"
+//       << sol_B(dim)    //: Pressure at stagnation pt
+//       << "\t"
+//       << sol_B(dim) - pressure_A //: Pressure drop
+//       << "\t"
+//       << (par.cfd_test ? c_D : (drag_lift_cyl[0] + drag_lift_flag_f[0])) //: Drag coefficient/Total drag based on fluid stress
+//       << "\t"
+//       << (par.cfd_test ? c_L : (drag_lift_cyl[1] + drag_lift_flag_f[1])) //: Lift coefficient/Total lift based on fluid stress
+//       << "\t"
+//       << drag_lift_cyl[0] + drag_lift_flag_s[0] //: Drag based on integrating traction in the solid
+//       << "\t"
+//       << drag_lift_cyl[1] + drag_lift_flag_s[1] //: Lift based on integrating traction in the solid
+//       << "\t"
+//       << drag_lift_cyl[0] + drag_lift_flag_avg[0] //: Drag based on avg. of the traction at the interface
+//       << "\t"
+//       << drag_lift_cyl[1] + drag_lift_flag_avg[1] //: Lift based on avg. of the traction at the interface
+//       <<endl;
+// }
 
 
 template <int dim>

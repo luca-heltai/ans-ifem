@@ -16,8 +16,6 @@
 #ifndef ifem_parameters_generalized_h
 #define ifem_parameters_generalized_h
 
-#include "ifem_parameters.h"
-
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/parsed_function.h>
 
@@ -33,8 +31,7 @@ using namespace std;
 //! in <code>deal.II</code>.
 
 template <int dim>
-class IFEMParametersGeneralized :
-  public IFEMParameters<dim>
+class IFEMParametersGeneralized : public ParameterHandler
 {
 public:
   IFEMParametersGeneralized(int argc, char **argv);
