@@ -61,25 +61,32 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
     default:
       break;
     }
-
-  if (par.this_is_a_restart)
-    {
-      global_info_file.open((par.output_name+"_post_global.gpl").c_str(), ios::app);
-
-      if (par.fsi_bm)
-        fsi_bm_out_file.open((par.output_name+"_post_fsi_bm.out").c_str(), ios::app);
-    }
-  else
-    {
-      global_info_file.open((par.output_name+"_post_global.gpl").c_str());
-
-      if (par.fsi_bm)
-        fsi_bm_out_file.open((par.output_name+"_post_fsi_bm.out").c_str());
-    }
+  
+  std::ifstream in_test((par.output_name+"_post_global.gpl").c_str());
+  ios::openmode mode;
+  if(in_test) {
+    mode = ios::app;
+    std::string line;
+    while(in_test >> std::ws && std::getline(in_test, line));
+    // now we have last line
+    sscanf(line.c_str(), "%lf", &current_time);
+    previous_time = current_time;
+    time_step = static_cast<unsigned int>(current_time, par.dt);
+    dt = par.dt;
+    in_test.close();
+  } else {
+    mode = ios::out;
+    previous_time = 0.0;
+    current_time = 0.0;
+    time_step = 0;
+    dt = par.dt;
+  }
+  
+  global_info_file.open((par.output_name+"_post_global.gpl").c_str(), mode);
+  
+  fsi_bm_out_file.open((par.output_name+"_post_fsi_bm.out").c_str(), mode);
 
   create_triangulation_and_dofs ();
-
-
 }
 
 // Distructor: deletion of pointers created with <code>new</code> and
@@ -91,8 +98,7 @@ PostProcessor<dim>::~PostProcessor ()
   delete mapping;
   global_info_file.close();
 
-  if (par.fsi_bm)
-    fsi_bm_out_file.close();
+  fsi_bm_out_file.close();
 }
 
 // Determination of the current value of time dependent boundary
@@ -258,11 +264,6 @@ PostProcessor<dim>::create_triangulation_and_dofs ()
   tmp_vec_n_dofs_up.reinit(n_dofs_up);
   tmp_vec_n_dofs_W.reinit(n_dofs_W);
 
-  previous_time = 0.0;
-  current_time = 0.0;
-  time_step = 0;
-  dt = par.dt;
-  
   // Read in first solution
   std::ifstream fluid_binary_file( (par.output_name + "-fluid-" +
 				    Utilities::int_to_string (time_step, 5) +
@@ -348,6 +349,13 @@ std::vector<unsigned int> get_point_dofs(const DoFHandler<dim,spacedim> &dh,
   for(unsigned int i=0; i<support_points.size(); ++i)
     if(support_points[i].distance(p) < rel_tol)
       dofs.push_back(i);
+  if(dofs.size())
+    {
+      cout << "Found " << dofs.size() << " point dofs: ";
+      for(unsigned int i=0; i<dofs.size(); ++i)
+	cout << dofs[i] << ", ";
+      cout << endl;
+    }
   return dofs;
 }
 
@@ -470,7 +478,6 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
       }
     else 
       { 
-	cout << "Found point dofs" << endl;
 	for(int d=0; d<dim; ++d)
 	  disp_A(d) = current_xi.block(1)(A_dofs[d]);
       }
@@ -752,7 +759,8 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
 
 	  }//End loop over solid cells
 
-      }//For FSI test only
+    }//For FSI test only
+
     fsi_bm_out_file.unsetf(ios_base::floatfield);
     fsi_bm_out_file
       << current_time
@@ -762,6 +770,8 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
       << "\t"
       << disp_A(1)
       << "\t"
+      << (dim == 3 ? disp_A(2) : 0)
+      << (dim == 3 ? "\t" : "")
       << sol_B(dim)    //: Pressure at stagnation pt
       << "\t"
       << sol_B(dim) - pressure_A //: Pressure drop
