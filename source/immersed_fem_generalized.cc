@@ -3537,21 +3537,6 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
       <<endl;
 }
 
-// template<int dim, int spacedim>
-// std::vector<unsigned int> get_point_dofs(const DoFHandler<dim,spacedim> &dh, 
-// 					 const Point<spacedim> &p,
-// 					 const Mapping<dim,spacedim> &mapping=StaticMappingQ1::mapping,
-// 					 const double tol=1e-10) {
-//   std::vector< Point<spacedim> > support_points(dh.n_dofs());
-//   DoFTools::map_dofs_to_support_points(mapping, dh, support_points);
-//   std::vector<unsigned int> dofs;
-//   const double rel_tol=std::max(tol, tol*p.norm());
-//   for(unsigned int i=0; i<support_points.size(); ++i)
-//     if(support_points[i].distance(p) < rel_tol)
-//       dofs.push_back[i];
-//   return dofs;
-// }
-
 
 // //Calculation and output of tip displacement of the flag and lift-drag on the
 // // cylinder+flag in the Turek-Hron FSI benchmark test

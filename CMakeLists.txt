@@ -1,5 +1,6 @@
 # Set the name of the project and target:
 SET(TARGET "ifem")
+SET(POSTPROCESSOR "postprocessor")
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 FIND_PACKAGE(deal.II 8.0
@@ -23,13 +24,24 @@ ADD_SUBDIRECTORY(tests)
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-FILE(GLOB TARGET_SRC source/*cc include/*.h)
 INCLUDE_DIRECTORIES("include/")
 PROJECT(${TARGET})
+SET(TARGET_SRC
+        source/exact_solution_ring_with_fibers.cc
+        source/ifem_parameters_generalized.cc
+        source/immersed_fem_generalized.cc
+        source/main.cc)
 ADD_EXECUTABLE(${TARGET} ${TARGET_SRC})
-
-
 DEAL_II_SETUP_TARGET(${TARGET})
+
+PROJECT(${POSTPROCESSOR})
+SET(POSTPROCESSOR_SRC
+	source/exact_solution_ring_with_fibers.cc
+	source/ifem_parameters_generalized.cc 
+	source/post_processor.cc 
+	source/main_post_processor.cc)
+ADD_EXECUTABLE(${POSTPROCESSOR} ${POSTPROCESSOR_SRC})
+DEAL_II_SETUP_TARGET(${POSTPROCESSOR})
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
