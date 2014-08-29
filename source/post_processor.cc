@@ -64,17 +64,17 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
 
   if (par.this_is_a_restart)
     {
-      global_info_file.open((par.output_name+"_global.gpl").c_str(), ios::app);
+      global_info_file.open((par.output_name+"_post_global.gpl").c_str(), ios::app);
 
       if (par.fsi_bm)
-        fsi_bm_out_file.open((par.output_name+"_fsi_bm.out").c_str(), ios::app);
+        fsi_bm_out_file.open((par.output_name+"_post_fsi_bm.out").c_str(), ios::app);
     }
   else
     {
-      global_info_file.open((par.output_name+"_global.gpl").c_str());
+      global_info_file.open((par.output_name+"_post_global.gpl").c_str());
 
       if (par.fsi_bm)
-        fsi_bm_out_file.open((par.output_name+"_fsi_bm.out").c_str());
+        fsi_bm_out_file.open((par.output_name+"_post_fsi_bm.out").c_str());
     }
 
   create_triangulation_and_dofs ();
