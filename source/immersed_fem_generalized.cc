@@ -1,10 +1,22 @@
 #include "immersed_fem_generalized.h"
+// #include <boost/filesystem.hpp>
 
+namespace boost 
+{
+  namespace filesystem 
+  {
+    std::string extension(const std::string &fn) 
+    {
+      return fn.substr(fn.find_last_of(".") + 1);
+    }
+  }
+}
+
+      
 void move_file (const string &old_name,
-                const string &new_name)
+		const string &new_name)
 {
   const int error = system (("mv " + old_name + " " + new_name).c_str());
-
   AssertThrow (error == 0, ExcMessage(string ("Can't move files: ")
                                       +
                                       old_name + " -> " + new_name));
@@ -229,7 +241,13 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 
         // A grid in ucd format is expected.
-        grid_in_f.read_msh (file);
+	if(boost::filesystem::extension(par.fluid_mesh) == "msh")
+	  grid_in_f.read_msh (file);
+	else if(boost::filesystem::extension(par.fluid_mesh) == "inp")
+	  grid_in_f.read_ucd (file);
+	else
+	  AssertThrow(false, ExcMessage("Input file not supported."));
+	
       }
 
       GridIn<dim, dim> grid_in_s;
@@ -239,7 +257,13 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
       Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
 
 // A grid in ucd format is expected.
-      grid_in_s.read_msh (file);
+              // A grid in ucd format is expected.
+      if(boost::filesystem::extension(par.solid_mesh) == "msh")
+	grid_in_f.read_msh (file);
+      else if(boost::filesystem::extension(par.solid_mesh) == "inp")
+	grid_in_f.read_ucd (file);
+      else
+	AssertThrow(false, ExcMessage("Input file not supported."));
     }
 
   if (par.fsi_bm)
