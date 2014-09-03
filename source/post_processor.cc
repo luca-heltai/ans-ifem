@@ -71,7 +71,7 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
     // now we have last line
     sscanf(line.c_str(), "%lf", &current_time);
     previous_time = current_time;
-    time_step = static_cast<unsigned int>(current_time, par.dt);
+    time_step = static_cast<unsigned int>(current_time/par.dt);
     dt = par.dt;
     in_test.close();
   } else {
