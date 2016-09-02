@@ -29,7 +29,7 @@ ImmersedFEM<dim>::ImmersedFEM (IFEMParameters<dim> &par)
 		fe_f (
 		  FE_Q<dim>(par.degree),
 		  dim,
-		  *FETools::get_fe_from_name<dim>(par.fe_p_name),
+          *FETools::get_fe_by_name<dim,dim>(par.fe_p_name),
 		  1
 		),
 		fe_s (FE_Q<dim, dim>(par.degree), dim),
@@ -187,7 +187,7 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
 
 
 // Initialization of the boundary_indicators vector.
-  boundary_indicators = tria_f.get_boundary_indicators ();
+  boundary_indicators = tria_f.get_boundary_ids();
 
 
 // Distribution of the degrees of freedom. Both for the solid
@@ -297,13 +297,13 @@ ImmersedFEM<dim>::create_triangulation_and_dofs ()
     VectorTools::project (dh_s, cc, quad_s, par.W_0, previous_xi.block(1));
 
   mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-							    previous_xi.block(1), dh_s);
+                                 dh_s, previous_xi.block(1));
 
 
 // We now deal with the sparsity patterns.
   {
 
-    BlockCompressedSimpleSparsityPattern csp (2,2);
+    BlockDynamicSparsityPattern csp (2,2);
     
     csp.block(0,0).reinit (n_dofs_up, n_dofs_up);
     csp.block(0,1).reinit (n_dofs_up, n_dofs_W );
@@ -403,8 +403,8 @@ ImmersedFEM<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
   FEValues<dim,dim> fe_v(immersed_mapping, fe_s, quad_s,
 			 update_quadrature_points);
 
-  CompressedSimpleSparsityPattern sp1(n_dofs_up, n_dofs_W);
-  CompressedSimpleSparsityPattern sp2(n_dofs_W , n_dofs_up);
+  DynamicSparsityPattern sp1(n_dofs_up, n_dofs_W);
+  DynamicSparsityPattern sp2(n_dofs_W , n_dofs_up);
 
   for(; cell != endc; ++cell)
     {
@@ -504,13 +504,13 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
   if(par.semi_implicit == true)
     {
       mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-								previous_xi.block(1),
-								dh_s);
+                                dh_s,
+                                previous_xi.block(1));
     }
   else
     mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-							      xi.block(1),
-							      dh_s);
+                                                              dh_s,
+                                                              xi.block(1));
 
 
 // In applying the boundary conditions, we set a scaling factor equal
@@ -1034,7 +1034,7 @@ ImmersedFEM<dim>::residual_and_or_Jacobian
 // Contribution due to the elastic component of the stress response
 // function in the solid:  \f$P_{s}^{e} F^{T} \cdot \nabla_{x} v\f$.
 		    if((!par.semi_implicit) || (!par.use_spread))
-		      contract (PeFT, Pe[qs], 2, F[qs], 2);
+                PeFT = contract<1,1>(Pe[qs],F[qs]);
 		    if (!par.use_spread)
 		      {
 			local_res[i] += (PeFT[comp_i]
@@ -1548,10 +1548,10 @@ ImmersedFEM<dim>::output_step
 	  {
 	    fe_v.reinit(cell, f);
 	    fe_v.get_function_values(solution.block(0), local_vp);
-	    const vector<Point<dim> > &normals = fe_v.get_normal_vectors();
+        const vector<Tensor<1,dim> > &normals = fe_v.get_all_normal_vectors();
 	    for(unsigned int q=0; q<face_quad.size(); ++q)
 	      {
-		Point<dim> vq;
+        Tensor<1,dim> vq;
 		for(unsigned int d=0; d<dim; ++d) vq[d] = local_vp[q](d);
 		flux += (vq*normals[q])*fe_v.JxW(q);
 	      }
@@ -1738,7 +1738,7 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 		  }
 		break;
 	  case IFEMParameters<dim>::CircumferentialFiberModel:
-		p = fe_v_s.quadrature_point(qs) - par.ring_center;
+        p = Point<dim>(fe_v_s.quadrature_point(qs) - par.ring_center);
 
 // Find the unit vector along the tangential direction
 		etheta[0]=-p[1]/p.norm();
@@ -1746,8 +1746,8 @@ ImmersedFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
 
 // Find the tensor product of etheta and etheta
-		outer_product(etheta_op_etheta, etheta, etheta);
-		contract (Pe[qs], F, etheta_op_etheta);
+        etheta_op_etheta = outer_product(etheta, etheta);
+        Pe[qs] = contract<1,0> (F, etheta_op_etheta);
 		Pe[qs] *= par.mu;
 		if( update_jacobian )
 		  {
