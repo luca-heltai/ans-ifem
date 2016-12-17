@@ -26,10 +26,8 @@ section 5 and 6 of this file for further information on this license.
 1. Deal.II Requirements:
 ========================
 
-The FEIBM source code requires the deal.II 8.0 library or greater. It
-has also been tested with the current svn release deal.II 8.2.pre, and
-a CMakeLists.txt file which will allow you to compile it with later
-deal.II versions has been included.
+The FEIBM source code requires the deal.II 8.4 library or greater. It
+has also been tested with the current git release deal.II 8.5.pre.
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory
@@ -49,16 +47,17 @@ The provided archive should be unzipped in a dedicated
 subdirectory, with the commands
 
 	cd PATH_WHERE_YOU_WANT_THIS_CODE
-	tar xvfz ans-ifem-v1.0.tgz
+	tar xvfz ans-ifem-vXXX.tgz
 	
 or cloned using git
 
-	git clone https://bitbucket.org/heltai/ans-ifem
+	git clone https://github.com/luca-heltai/ans-ifem
 
 The program can then be compiled by running
 
-	cd ans-ifem
-	cmake -DDEAL_II_DIR=/path/to/deal.II .
+	mkdir build
+	cd build
+	cmake -DDEAL_II_DIR=/path/to/deal.II ..
 	make
 	
 3. Running instructions:
