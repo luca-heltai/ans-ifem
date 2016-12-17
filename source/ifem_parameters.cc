@@ -150,10 +150,10 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
 // specified in input, use the default one, else read each additional
 // argument.
   if (argc == 1)
-    this->read_input ("immersed_fem.prm");
+    this->parse_input ("immersed_fem.prm");
   else
     for (int i=1; i<argc; ++i)
-      this->read_input(argv[i]);
+      this->parse_input(argv[i]);
 
 
 // Reading in the parameters.
