@@ -1306,7 +1306,11 @@ ImmersedFEM<dim>::run ()
 
 
 // Time derivative of the system's state.
-	  current_xit.sadd (0, 1./par.dt, current_xi, -1./par.dt, previous_xi);
+      // current_xit.sadd (0, 1./par.dt, current_xi, -1./par.dt, previous_xi); // Deprecated!!!
+
+      current_xit  = current_xi;
+      current_xit -= previous_xi;
+      current_xit /= par.dt;
 
 	  if (update_Jacobian == true)
             {
