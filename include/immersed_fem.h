@@ -79,31 +79,31 @@
 template <int dim>
 class ImmersedFEM
 {
-  public:
+public:
 
 
 //! No default constructor is defined. Simulation objects must be
 //! initialized by assigning the simulation parameters, which are
 //! elements of objects of type ProblemParameters.
 
-    ImmersedFEM(IFEMParameters<dim> &par);
-    ~ImmersedFEM();
+  ImmersedFEM(IFEMParameters<dim> &par);
+  ~ImmersedFEM();
 
-    void run ();
+  void run ();
 
-  private:
+private:
 
 
 //! The parameters of the problem.
 
-    IFEMParameters<dim> &par;
+  IFEMParameters<dim> &par;
 
 
 //! Vector of boundary indicators. The type of this vector matches the
 //! return type of the function <code>Triangulation< dim, spacedim
 //! >::get_boundary_indicator()</code>.
 
-    vector<unsigned char> boundary_indicators;
+  vector<unsigned char> boundary_indicators;
 
 
 //! Triangulation over the control volume (fluid domain).  Following
@@ -113,7 +113,7 @@ class ImmersedFEM
 //! is specified so that the dimension of the manifold and of the
 //! containing space are the same.
 
-    Triangulation<dim> tria_f;
+  Triangulation<dim> tria_f;
 
 
 //! Triangulations of the immersed domain (solid domain).  Following
@@ -124,7 +124,7 @@ class ImmersedFEM
 //! in which the immersed domain is a manifold of dimension lower than
 //! that of the containing space.
 
-    Triangulation<dim, dim> tria_s;
+  Triangulation<dim, dim> tria_s;
 
 
 //! <code>FESystem</code> for the control volume. It consists of two fields:
@@ -132,28 +132,28 @@ class ImmersedFEM
 //! scalar field). The meaning of the parameter <i>dim</i> is as for
 //! the <code>Triangulation<dim> tria_f</code> element of the class.
 
-    FESystem<dim> fe_f;
+  FESystem<dim> fe_f;
 
 
 //! A variable to check whether the pressure field is approximated
 //! using the <code>FE_DGP</code> elements.
 
-    bool dgp_for_p;
+  bool dgp_for_p;
 
 
-//! This is the <code>FESystem</code> for the immersed domain. 
+//! This is the <code>FESystem</code> for the immersed domain.
 
-    FESystem<dim, dim> fe_s;
+  FESystem<dim, dim> fe_s;
 
 
 //! The dof_handler for the control volume.
 
-    DoFHandler<dim> dh_f;
+  DoFHandler<dim> dh_f;
 
 
 //! The dof_handler for the immersed domain.
 
-    DoFHandler<dim, dim> dh_s;
+  DoFHandler<dim, dim> dh_s;
 
 
 //! The triangulation of for the immersed domain defines the reference
@@ -164,226 +164,227 @@ class ImmersedFEM
 //! <code>MappingQEulerian</code> object that will support such a
 //! description.
 
-    MappingQEulerian<dim, Vector<double>, dim> * mapping;
+  MappingQEulerian<dim, Vector<double>, dim> *mapping;
 
 
 //! The quadrature object for the control volume.
 
-    QGauss<dim> quad_f;
+  QGauss<dim> quad_f;
 
 
 //! The quadrature object for the immersed domain.
 
-    QTrapez<1> qtrapez;
-    QIterated<dim> quad_s;
+  QTrapez<1> qtrapez;
+  QIterated<dim> quad_s;
 
 
 //! Sparsity pattern.
 
-    BlockSparsityPattern sparsity;
+  BlockSparsityPattern sparsity;
 
 
 //! Jacobian of the residual.
 
-    BlockSparseMatrix<double> JF;
+  BlockSparseMatrix<double> JF;
 
 
 //! Object of <code>BlockSparseMatrix<double></code> type to be used in
 //! place of the real Jacobian when the real Jacobian is not to be modified.
 
 
-    BlockSparseMatrix<double> dummy_JF;
+  BlockSparseMatrix<double> dummy_JF;
 
 
 //! State of the system at current time step: velocity, pressure, and
 //! displacement of the immersed domain.
 
-    BlockVector<double> current_xi;
+  BlockVector<double> current_xi;
 
 
 //! State of the system at previous time step: velocity, pressure, and
 //! displacement of the immersed domain.
 
-    BlockVector<double> previous_xi;
+  BlockVector<double> previous_xi;
 
 
 //! Approximation of the time derivative of the state of the system.
 
-    BlockVector<double> current_xit;
+  BlockVector<double> current_xit;
 
 
 //! Current value of the residual.
 
-    BlockVector<double> current_res;
+  BlockVector<double> current_res;
 
 
 //! Newton iteration update.
 
-    BlockVector<double> newton_update;
+  BlockVector<double> newton_update;
 
 
 //! Vector to compute the average pressure when the average pressure is
 //! set to zero.
 
-    Vector<double> pressure_average;
+  Vector<double> pressure_average;
 
 
 //! Vector to represent a uniform unit pressure.
 
-    Vector<double> unit_pressure;
+  Vector<double> unit_pressure;
 
 //! Number of degrees of freedom for each component of the system.
 
-    unsigned int n_dofs_u, n_dofs_p, n_dofs_up, n_dofs_W, n_total_dofs;
+  unsigned int n_dofs_u, n_dofs_p, n_dofs_up, n_dofs_W, n_total_dofs;
 
 //! A couple of vectors that can be used as temporary storage. They are
 //! defined as a private member of the class to avoid that the object
 //! is allocated and deallocated when used, so to gain in efficiency.
-    Vector<double> tmp_vec_n_total_dofs;
-    Vector<double> tmp_vec_n_dofs_up;
+  Vector<double> tmp_vec_n_total_dofs;
+  Vector<double> tmp_vec_n_dofs_up;
 
 //! Matrix to be inverted when solving the problem.
-    SparseDirectUMFPACK JF_inv;
+  SparseDirectUMFPACK JF_inv;
 
 
 //! Scalar used for conditioning purposes.
-    double scaling;
+  double scaling;
 
 
 //! The first dof of the pressure field.
-    unsigned int constraining_dof;
+  unsigned int constraining_dof;
 
 
 //! A container to store the dofs corresponding to the pressure field.
-    set<unsigned int> pressure_dofs;
+  set<unsigned int> pressure_dofs;
 
 
 //! Storage for the elasticity operator of the immersed domain.
-    Vector <double> A_gamma;
+  Vector <double> A_gamma;
 
 
 //! Mass matrix of the immersed domain.
-    SparseMatrix<double> M_gamma3;
+  SparseMatrix<double> M_gamma3;
 
 
 //! Inverse of M_gamma3.
-    SparseDirectUMFPACK M_gamma3_inv;
+  SparseDirectUMFPACK M_gamma3_inv;
 
 
 //! M_gamma3_inv * A_gamma.
-    Vector <double> M_gamma3_inv_A_gamma;
+  Vector <double> M_gamma3_inv_A_gamma;
 
 
 //! Area of the control volume.
-    double area;
+  double area;
 
 
 //! File stream that is used to output a file containing information
 //! about the fluid flux, area and the centroid of the immersed domain
 //! over time.
-    ofstream global_info_file;
+  ofstream global_info_file;
 
 
-    void create_triangulation_and_dofs ();
+  void create_triangulation_and_dofs ();
 
-    void apply_constraints (vector<double> &local_res,
-                            FullMatrix<double> &local_jacobian,
-                            const Vector<double> &local_up,
-                            const vector<unsigned int> &dofs);
+  void apply_constraints (vector<double> &local_res,
+                          FullMatrix<double> &local_jacobian,
+                          const Vector<double> &local_up,
+                          const vector<unsigned int> &dofs);
 
-    void compute_current_bc (const double time);
+  void compute_current_bc (const double time);
 
-    void apply_current_bc (
-      BlockVector<double> &vec,
-      const double time);
+  void apply_current_bc (
+    BlockVector<double> &vec,
+    const double time);
 
-    void assemble_sparsity (Mapping<dim, dim> &mapping);
+  void assemble_sparsity (Mapping<dim, dim> &mapping);
 
-    void  get_area_and_first_pressure_dof ();
+  void  get_area_and_first_pressure_dof ();
 
-    void residual_and_or_Jacobian (
-      BlockVector<double> &residual,
-      BlockSparseMatrix<double> &Jacobian,
-      const BlockVector<double> &xit,
-      const BlockVector<double> &xi,
-      const double alpha,
-      const double t
-    );
+  void residual_and_or_Jacobian (
+    BlockVector<double> &residual,
+    BlockSparseMatrix<double> &Jacobian,
+    const BlockVector<double> &xit,
+    const BlockVector<double> &xi,
+    const double alpha,
+    const double t
+  );
 
-    void distribute_residual (
-      Vector<double> &residual,
-      const vector<double> &local_res,
-      const vector<unsigned int> &dofs_1,
-      const unsigned int offset_1
-    );
+  void distribute_residual (
+    Vector<double> &residual,
+    const vector<double> &local_res,
+    const vector<unsigned int> &dofs_1,
+    const unsigned int offset_1
+  );
 
-    void distribute_jacobian (
-      SparseMatrix<double> &Jacobian,
-      const FullMatrix<double> &local_Jac,
-      const vector<unsigned int> &dofs_1,
-      const vector<unsigned int> &dofs_2,
-      const unsigned int offset_1,
-      const unsigned int offset_2
-    );
+  void distribute_jacobian (
+    SparseMatrix<double> &Jacobian,
+    const FullMatrix<double> &local_Jac,
+    const vector<unsigned int> &dofs_1,
+    const vector<unsigned int> &dofs_2,
+    const unsigned int offset_1,
+    const unsigned int offset_2
+  );
 
-    void distribute_constraint_on_pressure (
-      Vector<double> &residual,
-      const double average_pressure
-    );
+  void distribute_constraint_on_pressure (
+    Vector<double> &residual,
+    const double average_pressure
+  );
 
-    void distribute_constraint_on_pressure (
-      SparseMatrix<double> &jacobian,
-      const vector<double> &pressure_coefficient,
-      const vector<unsigned int> &dofs,
-      const unsigned int offset
-    );
+  void distribute_constraint_on_pressure (
+    SparseMatrix<double> &jacobian,
+    const vector<double> &pressure_coefficient,
+    const vector<unsigned int> &dofs,
+    const unsigned int offset
+  );
 
-    void localize (
-      Vector<double> &local_M_gamma3_inv_A_gamma,
-      const Vector<double> &M_gamma3_inv_A_gamma,
-      const vector<unsigned int> &dofs
-    );
+  void localize (
+    Vector<double> &local_M_gamma3_inv_A_gamma,
+    const Vector<double> &M_gamma3_inv_A_gamma,
+    const vector<unsigned int> &dofs
+  );
 
-    void get_Agamma_values (
-      const FEValues<dim,dim> &fe_v_s,
-      const vector< unsigned int > &dofs,
-      const Vector<double> &xi,
-      Vector<double> &local_A_gamma
-    );
+  void get_Agamma_values (
+    const FEValues<dim,dim> &fe_v_s,
+    const vector< unsigned int > &dofs,
+    const Vector<double> &xi,
+    Vector<double> &local_A_gamma
+  );
 
-    void get_Pe_F_and_DPeFT_dxi_values (
-      const FEValues<dim,dim> &fe_v_s,
-      const vector< unsigned int > &dofs,
-      const Vector<double> &xi,
-      const bool update_jacobian,
-      vector<Tensor<2,dim,double> > &Pe,
-      vector<Tensor<2,dim,double> > &F,
-      vector< vector<Tensor<2,dim,double> > > & DPe_dxi
-    );
+  void get_Pe_F_and_DPeFT_dxi_values (
+    const FEValues<dim,dim> &fe_v_s,
+    const vector< unsigned int > &dofs,
+    const Vector<double> &xi,
+    const bool update_jacobian,
+    vector<Tensor<2,dim,double> > &Pe,
+    vector<Tensor<2,dim,double> > &F,
+    vector< vector<Tensor<2,dim,double> > > &DPe_dxi
+  );
 
-    void calculate_error () const;
+  void calculate_error () const;
 
-    unsigned int n_dofs() const {
-      return n_total_dofs;
-    };
+  unsigned int n_dofs() const
+  {
+    return n_total_dofs;
+  };
 
-    void output_step (
-      const double t,
-      const BlockVector<double> &solution,
-      const unsigned int step_number,
-      const double h
-    );
+  void output_step (
+    const double t,
+    const BlockVector<double> &solution,
+    const unsigned int step_number,
+    const double h
+  );
 
-    template<class Type>
-    inline void set_to_zero (Type &v) const;
+  template<class Type>
+  inline void set_to_zero (Type &v) const;
 
-    template<class Type>
-    inline void set_to_zero (Table<2,Type> &v) const;
+  template<class Type>
+  inline void set_to_zero (Table<2,Type> &v) const;
 
-    template<class Type>
-    inline void set_to_zero(vector<Type> &v) const;
+  template<class Type>
+  inline void set_to_zero(vector<Type> &v) const;
 
-    double norm(const vector<double> &v);
+  double norm(const vector<double> &v);
 };
 
 #endif

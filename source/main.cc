@@ -1,4 +1,4 @@
-// Copyright (C) 2014 by Luca Heltai (1), 
+// Copyright (C) 2014 by Luca Heltai (1),
 // Saswati Roy (2), and Francesco Costanzo (3)
 //
 // (1) Scuola Internazionale Superiore di Studi Avanzati
@@ -11,9 +11,9 @@
 // This code was developed starting from the example
 // step-33 of the deal.II FEM library.
 //
-// This file is subject to LGPL and may not be  distributed without 
-// copyright and license information. Please refer     
-// to the webpage http://www.dealii.org/ -> License            
+// This file is subject to LGPL and may not be  distributed without
+// copyright and license information. Please refer
+// to the webpage http://www.dealii.org/ -> License
 // for the  text  and further information on this license.
 //
 // Keywords: fluid-structure interaction, immersed method,
@@ -26,7 +26,7 @@
    <br>
    <a name="Intro"></a>
    <h1> Introduction </h1>
-   
+
    <p> We present the implementation of a solution scheme for
    fluid-structure interaction problems via the finite element
    software library <tt>deal.II</tt>.  Specifically, we implement an
@@ -73,7 +73,7 @@ x = s + w(s,t).
 @f]
 From the above relation we have that \f$F(s,t) = I + \nabla_{s} w(s,t)\f$, where \f$I\f$ is the identity tensor.
 </p>
- 
+
 <p>
 <b>Constitutive Equations.</b>
 The fluid is assumed to be Newtonian so that its Cauchy stress is \f$\sigma_{f} = -p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}]\f$, where \f$p\f$ is the Lagrange multiplier for the enforcement of incompressibility, \f$\eta\f$ is the dynamic viscosity, \f$\nabla_{x}\f$ is the gradient operator relative to position in the current configuration, and \f$u\f$ is the velocity field.  For a Newtonian fluid, \f$p\f$ is also the pressure (mean normal stress).  The immersed solid is assumed to be incompressible and viscoelastic, with the viscous response identical to that of the fluid.  The elastic response is assumed to be admit a strain energy \f$W_{s}^{e}(F)\f$, which we assumed to be a convex function of the deformation gradient.  Hence the Cauchy stress in the solid is given by \f$\sigma_{s} = - p I + \eta [\nabla_{x} u + (\nabla_{x} u)^{T}] + \sigma_{s}^{e}\f$, with \f$\sigma_{s}^{e} = J^{-1} P_{s}^{e} F^{-T}\f$, where \f$P_{s}^{e} = \partial W_{s}^{e}/\partial F\f$ is the first Piola-Kirchhoff stress tensor of the solid.
@@ -82,7 +82,7 @@ The fluid is assumed to be Newtonian so that its Cauchy stress is \f$\sigma_{f} 
 <b>Velocity field and Displacement of the Immersed Body.</b>
 The velocity field \f$u(x,t)\f$, with \f$x \in \Omega\f$, represents that velocity of the particle occupying the point \f$x\f$ at time \f$t\f$.  As such, this field describes the velocity of the fluid for \f$x \in \Omega/B_{t}\f$ and the velocity of the solid for \f$x \in B_{t}\f$.  Therefore, using the displacement function \f$w(s,t)\f$, for \f$s \in B\f$ and for al \f$t\f$, we have
 @f[
-	u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t}.
+  u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t}.
 @f]
 </p>
 <p>
@@ -92,15 +92,15 @@ The boundary of the immersed body is viewed as a material surface.  Therefore, t
 <b>Governing Equations: Strong Form.</b>
 The motion of the system is governed by the following three equations, which, respectively, represent the balance of linear momentum, balance of mass accounting for incompressibility, and velocity compatibility:
 @f[
-	\nabla \cdot \sigma(x,t) + \rho b = \rho \biggl[\frac{\partial u(x,t)}{\partial t} + (\nabla u(x,t)) u(x,t) \biggr] \quad {\rm in}~\Omega,\quad
-	\nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
-	u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
+  \nabla \cdot \sigma(x,t) + \rho b = \rho \biggl[\frac{\partial u(x,t)}{\partial t} + (\nabla u(x,t)) u(x,t) \biggr] \quad {\rm in}~\Omega,\quad
+  \nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
+  u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
 @f]
 where "\f$\nabla_{x} \cdot\f$" denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
 </p>
 
 <p>
-As far as boundary conditions are concerned, we assume that a velocity and a traction distribution are prescribed on complementary subsets of the boundary of \f$\Omega\f$.  Specifically,  letting \f$\partial \Omega_{D} \cup \partial \Omega_{N} = \partial \Omega\f$, with \f$\partial \Omega_{D} \cap \partial \Omega_{N} = \emptyset\f$, 
+As far as boundary conditions are concerned, we assume that a velocity and a traction distribution are prescribed on complementary subsets of the boundary of \f$\Omega\f$.  Specifically,  letting \f$\partial \Omega_{D} \cup \partial \Omega_{N} = \partial \Omega\f$, with \f$\partial \Omega_{D} \cap \partial \Omega_{N} = \emptyset\f$,
 @f[
 u(x,t) = u_{g}(x,t)~{\rm for}~ x\in \partial \Omega_{D}
 \quad{\rm and}\quad
@@ -149,7 +149,7 @@ and (ii) a "spread" operator whose definition stems from the last equation of th
 The implementation of the various terms that are common to the Navier-Stokes equations is done in a standard fashion and will not be discussed here.  As alluded above, here we limit ourselves to the description of how to carry out the integration over \f$B\f$ of functions that are available through their finite element representation over the triangulation of \f$\Omega\f$.
 
 <p>
-Referring to the third equation in the weak formulation, let's consider the term 
+Referring to the third equation in the weak formulation, let's consider the term
 @f[
 \Phi_{B} \int_{B} u_{h}(x,t)\big|_{x = s + w_{h}(s,t)}  \cdot y_{h},
 @f]
@@ -164,7 +164,7 @@ where \f$u_{h}\f$ denotes the finite element representation of \f$u\f$ given by 
 In our code, for each cell of the immersed body, we start by determining the position of the quadrature points of the element corresponding to the cell at hand.  The position of the quadrature point is determined both relative to the reference unit element and relative to the global coordinate system adopted for the calculation, through the mappings:
 @f[
 s_{K}: \hat{K} := [0,1]^{d} \mapsto K \in B_{h},
-\quad{\rm and}\quad 
+\quad{\rm and}\quad
 s + w_{h}: K \mapsto {\rm current~position~of~solid~cell},
 @f]
 where \f$\hat{K}\f$ is the reference unit element and \f$d\f$ is the spatial dimension of the immersed solid.  These maps allow us to determine the global coordinates of the quadrature points. These coordinates are then passed to a search algorithm that identifies the cells in \f$\Omega_{h}\f$ that contain the points in question.  In turn, this identification allows us to evaluate the functions \f$v_h\f$. The overall operation is illustrated in the figure above where we show a cell of \f$B_{h}\f$ straddling four cells of \f$\Omega_{h}\f$ denoted fluid cells  A–D.  The quadrature points over the solid cell are denoted by filled circles.  The contribution to the above integral due to the solid cell is then computed by summing the partial contributions corresponding to each of the fluid cells intersecting the solid cell in question.  The implementation of an efficient search algorithm responsible for identifying the fluid cells intersecting an individual solid cell is the only technically challenging part of the procedure.  We use the built in facilities of the <code>deal.II</code> library to perform this task. Once the fluid cells containing the quadrature points of a given solid cell are found, we determine the value of \f$v_{h}\f$ at the quadrature points using the interpolation infrastructure inherent in the finite element representation of fields defined over \f$\Omega_{h}\f$.  The <code>deal.II</code> class we use for this implementation is the <code>FEFieldFunction</code>.
@@ -211,7 +211,7 @@ In the figure below a sample profile of \f$p\f$ over the entire control volume a
 <caption align="bottom">The values of \f$p\f$ after one time step when using \f$Q2/Q1\f$ elements.</caption>
 <tr>
 <td>@image html step-feibm.pQ2Q1m.png</td>
-<td>@image html step-feibm.pQ2Q1p.png</td> 
+<td>@image html step-feibm.pQ2Q1p.png</td>
 </tr>
 </table>
 We assess the convergence property of our numerical scheme by obtaining the convergence rate of the error between the exact and the numerical solutions of this equilibrium problem. The order of the rate of convergence (see the tables below) is \f$2.5\f$ for the \f$L^{2}\f$ norm of the velocity, 1.5 for the \f$H^{1}\f$ norm of the velocity and \f$1.5\f$ for the \f$L^{2}\f$ norm of the pressure. In all these numerical tests we have used 1856 cells with 15776 DoFs for the solid.
@@ -273,41 +273,41 @@ int main(int argc, char **argv)
   catch (exception &exc)
     {
       cerr
-	<< endl
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
+          << endl
+          << endl
+          << "----------------------------------------------------"
+          << endl;
       cerr
-	<< "Exception on processing: "
-	<< endl
-	<< exc.what()
-	<< endl
-	<< "Aborting!"
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
+          << "Exception on processing: "
+          << endl
+          << exc.what()
+          << endl
+          << "Aborting!"
+          << endl
+          << "----------------------------------------------------"
+          << endl;
       return 1;
     }
   catch (...)
     {
       cerr
-	<< endl
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
+          << endl
+          << endl
+          << "----------------------------------------------------"
+          << endl;
       cerr
-	<< "Unknown exception!"
-	<< endl
-	<< "Aborting!"
-	<< endl
-	<< "----------------------------------------------------"
-	<< endl;
+          << "Unknown exception!"
+          << endl
+          << "Aborting!"
+          << endl
+          << "----------------------------------------------------"
+          << endl;
       return 1;
     }
   cout
-    << "----------------------------------------------------"
-    << endl
-    << "Apparently everything went fine!"
-    << endl;
+      << "----------------------------------------------------"
+      << endl
+      << "Apparently everything went fine!"
+      << endl;
   return 0;
 }
