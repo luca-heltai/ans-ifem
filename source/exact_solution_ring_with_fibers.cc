@@ -19,9 +19,9 @@ template<int dim>
 ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
   IFEMParameters<dim> &prm
 )
-		:
-		Function<dim>(dim+1),
-		par(prm)
+  :
+  Function<dim>(dim+1),
+  par(prm)
 {
   par.enter_subsection (
     "Equilibrium Solution of Ring with Circumferential Fibers"
@@ -71,7 +71,7 @@ ExactSolutionRingWithFibers<dim>::vector_value_list
 ) const
 {
   Assert (points.size() == values.size(),
-	  ExcDimensionMismatch(points.size(), values.size()));
+          ExcDimensionMismatch(points.size(), values.size()));
 
   for (unsigned int i = 0; i < values.size(); ++i)
     vector_value (points[i], values[i]);
