@@ -3,20 +3,20 @@
 
 // #include <boost/filesystem.hpp>
 
-namespace boost 
+namespace boost
 {
-  namespace filesystem 
+  namespace filesystem
   {
-    std::string extension(const std::string &fn) 
+    std::string extension(const std::string &fn)
     {
       return fn.substr(fn.find_last_of(".") + 1);
     }
   }
 }
 
-      
+
 void move_file (const string &old_name,
-		const string &new_name)
+                const string &new_name)
 {
   const int error = system (("mv " + old_name + " " + new_name).c_str());
   AssertThrow (error == 0, ExcMessage(string ("Can't move files: ")
@@ -223,13 +223,13 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 
         // A grid in ucd format is expected.
-	if(boost::filesystem::extension(par.fluid_mesh) == "msh")
-	  grid_in_f.read_msh (file);
-	else if(boost::filesystem::extension(par.fluid_mesh) == "inp")
-	  grid_in_f.read_ucd (file);
-	else
-	  AssertThrow(false, ExcMessage("Input file not supported."));
-	
+        if (boost::filesystem::extension(par.fluid_mesh) == "msh")
+          grid_in_f.read_msh (file);
+        else if (boost::filesystem::extension(par.fluid_mesh) == "inp")
+          grid_in_f.read_ucd (file);
+        else
+          AssertThrow(false, ExcMessage("Input file not supported."));
+
       }
 
       GridIn<dim, dim> grid_in_s;
@@ -239,13 +239,13 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
       Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
 
 // A grid in ucd format is expected.
-              // A grid in ucd format is expected.
-      if(boost::filesystem::extension(par.solid_mesh) == "msh")
-	grid_in_f.read_msh (file);
-      else if(boost::filesystem::extension(par.solid_mesh) == "inp")
-	grid_in_f.read_ucd (file);
+      // A grid in ucd format is expected.
+      if (boost::filesystem::extension(par.solid_mesh) == "msh")
+        grid_in_f.read_msh (file);
+      else if (boost::filesystem::extension(par.solid_mesh) == "inp")
+        grid_in_f.read_ucd (file);
       else
-	AssertThrow(false, ExcMessage("Input file not supported."));
+        AssertThrow(false, ExcMessage("Input file not supported."));
     }
 
   if (par.fsi_bm)
@@ -471,7 +471,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
   current_xi = previous_xi;
 
   mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim>>
-      (par.degree, dh_s, previous_xi.block(1));
+            (par.degree, dh_s, previous_xi.block(1));
 
   if (!par.this_is_a_restart)
     {
@@ -520,7 +520,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 // they are related to the first pressure dof.
     if (par.all_DBC && !par.solid_is_compressible)
       {
-	std::set<unsigned int>::iterator it = pressure_dofs.begin();
+        std::set<unsigned int>::iterator it = pressure_dofs.begin();
         for (++it; it != pressure_dofs.end(); ++it)
           {
             dsp.block(0,0).add(constraining_dof, *it);
@@ -695,10 +695,10 @@ ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
 // coincides with the position of the body at the previous time step.
   if (par.semi_implicit == true)
     mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim> >
-        (par.degree, dh_s, previous_xi.block(1));
+              (par.degree, dh_s, previous_xi.block(1));
   else
     mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim> >
-        (par.degree, dh_s, xi.block(1));
+              (par.degree, dh_s, xi.block(1));
 
 
 // In applying the boundary conditions, we set a scaling factor equal
@@ -2287,16 +2287,16 @@ ImmersedFEMGeneralized<dim>::output_step
       << " ";
   {
     std::ofstream fluid_binary_file( (par.output_name + "-fluid-" +
-				      Utilities::int_to_string (step, 5) +
-				      ".bin").c_str() );
+                                      Utilities::int_to_string (step, 5) +
+                                      ".bin").c_str() );
     solution.block(0).block_write(fluid_binary_file);
-    
+
     std::ofstream solid_binary_file( ( par.output_name + "-solid-" +
-				       Utilities::int_to_string (step, 5) +
-				       ".bin").c_str() );
+                                       Utilities::int_to_string (step, 5) +
+                                       ".bin").c_str() );
     solution.block(1).block_write(solid_binary_file);
   }
-    
+
   if ((step % par.output_interval==0) || (_output))
     {
       {
@@ -3560,7 +3560,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 //   double U_avg = 0.0;
 //   double c_D = 0.0;
 //   double c_L = 0.;
-  
+
 //   static std::vector<unsigned int> corner_dofs=get_point_dofs(dh_s, point_A);
 //   AssertDimension(corner_dofs.size(), dim);
 
@@ -3964,7 +3964,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 //             }//loop over faces of solid cells
 //         }//End loop over solid cells
 //     }//For FSI test only
-  
+
 //   fsi_bm_out_file.unsetf(ios_base::floatfield);
 //   fsi_bm_out_file
 //       << current_time

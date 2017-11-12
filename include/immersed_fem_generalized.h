@@ -82,7 +82,7 @@ using namespace std;
 //! interface is <code>run()</code>, which is invoked to carry out the
 //! simulation.
 template <int dim>
-class ImmersedFEMGeneralized 
+class ImmersedFEMGeneralized
 {
 public:
 
