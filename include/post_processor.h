@@ -39,6 +39,8 @@
 #include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/grid/grid_in.h>
 #include <deal.II/grid/grid_tools.h>
+#include <deal.II/grid/manifold.h>
+#include <deal.II/grid/manifold_lib.h>
 
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
@@ -106,7 +108,7 @@ private:
   // return type of the function <code>Triangulation< dim, spacedim
   // >::get_boundary_indicator()</code>.
 
-  vector<unsigned char> boundary_indicators;
+  vector<types::boundary_id> boundary_indicators;
 
 
   // Triangulation over the control volume (fluid domain).  Following

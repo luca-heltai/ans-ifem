@@ -15,7 +15,7 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
   fe_f (
     FE_Q<dim>(par.degree),
     dim,
-    *FETools::get_fe_from_name<dim>(par.fe_p_name),
+    *FETools::get_fe_by_name<dim>(par.fe_p_name),
     1
   ),
   fe_s (FE_Q<dim, dim>(par.degree), dim),
@@ -129,9 +129,10 @@ PostProcessor<dim>::create_triangulation_and_dofs ()
     Assert (file, ExcFileNotOpen (par.fluid_mesh.c_str()));
 
 
-    // A grid in ucd format is expected.
+    // A grid in mesh format is expected.
     grid_in_f.read_msh (file);
   }
+  GridTools::copy_boundary_to_manifold_id(tria_f);
   {
     GridIn<dim, dim> grid_in_s;
     grid_in_s.attach_triangulation (tria_s);
@@ -142,14 +143,14 @@ PostProcessor<dim>::create_triangulation_and_dofs ()
     // A grid in ucd format is expected.
     grid_in_s.read_msh (file);
   }
+  GridTools::copy_boundary_to_manifold_id(tria_f);
 
   if (par.fsi_bm && dim == 2)
     {
       Point<dim> center_circ(0.2, 0.2);
-      double radius_circ = 0.05;
-      static const HyperBallBoundary<dim> boundary_cyl(center_circ,radius_circ);
+      static const SphericalManifold<dim> boundary_cyl(center_circ);
 
-      tria_f.set_boundary(80, boundary_cyl);
+      tria_f.set_manifold(80, boundary_cyl);
 //  tria_f.set_boundary(81, boundary_cyl);
 
 //  tria_s.set_boundary(81, boundary_cyl);
@@ -191,7 +192,7 @@ PostProcessor<dim>::create_triangulation_and_dofs ()
       << endl;
 
 // Initialization of the boundary_indicators vector.
-  boundary_indicators = tria_f.get_boundary_indicators ();
+  boundary_indicators = tria_f.get_boundary_ids ();
 
 
 // Distribution of the degrees of freedom. Both for the solid
@@ -287,8 +288,8 @@ PostProcessor<dim>::create_triangulation_and_dofs ()
   
 
   mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-                                                            previous_xi.block(1),
-                                                            dh_s);
+                                                            dh_s,
+                                                            previous_xi.block(1));
 }
 
 
@@ -323,8 +324,9 @@ PostProcessor<dim>::run ()
 
       current_xi.block(1).block_read(solid_binary_file);
       
-
-      current_xit.sadd (0, 1./par.dt, current_xi, -1./par.dt, previous_xi);
+      current_xit = current_xi;
+      current_xit -= previous_xi;
+      current_xit /= par.dt;
       post_process(t, time_step, dt);
 
 // After we have post_processed the solution, we update the state of the
@@ -362,7 +364,7 @@ std::vector<unsigned int> get_point_dofs(const DoFHandler<dim,spacedim> &dh,
 template<int dim>
 bool face_not_on_cylinder(const typename DoFHandler<dim>::face_iterator &face) {
   if(dim == 2) 
-    return face->boundary_indicator() < 80;
+    return face->manifold_id() < 80;
   else 
     return  ( (std::abs(std::abs(face->center()[0]-5.0) - .5) > 1e-6 ) &&
 	      (std::abs(std::abs(face->center()[1]-2.0) - .5) > 1e-6 ) );
@@ -399,7 +401,7 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
           {
             fe_v.reinit(cell, f);
             fe_v.get_function_values(current_xi.block(0), local_vp);
-            const vector<Point<dim> > &normals = fe_v.get_normal_vectors();
+            const vector<Tensor<1,dim> > &normals = fe_v.get_normal_vectors();
             for (unsigned int q=0; q<face_quad.size(); ++q)
               {
                 Point<dim> vq;
@@ -463,8 +465,8 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
     Vector<double> sol_B (dim+1);
     double pressure_A = 0.0;
     double U_avg = 0.0;
-    double c_D = 0.0;
-    double c_L = 0.;
+//    double c_D = 0.0;
+//    double c_L = 0.;
 
     Point<dim> drag_lift;
     
@@ -582,7 +584,7 @@ PostProcessor<dim>::post_process(const double t, const unsigned int step, const 
 			     + sol_grad_f_face[q][j][i])
 			   - (i == j ? sol_f_face[q](dim) : 0.0)
 			   )
-			  *(fe_f_face_v.normal_vector(q)(j))
+        *(fe_f_face_v.normal_vector(q)[j])
 			  *fe_f_face_v.JxW(q);
 		  }//loop over q
 	      }//if cond.

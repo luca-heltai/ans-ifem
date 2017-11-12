@@ -1,4 +1,6 @@
 #include "immersed_fem_generalized.h"
+#include <deal.II/base/std_cxx14/memory.h>
+
 // #include <boost/filesystem.hpp>
 
 namespace boost 
@@ -38,7 +40,7 @@ ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<d
   fe_f (
     FE_Q<dim>(par.degree),
     dim,
-    *FETools::get_fe_from_name<dim>(par.fe_p_name),
+    *FETools::get_fe_by_name<dim>(par.fe_p_name),
     1
   ),
   fe_s (FE_Q<dim, dim>(par.degree), dim),
@@ -60,28 +62,16 @@ ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<d
   switch (par.quad_s_type)
     {
     case IFEMParametersGeneralized<dim>::QGauss :
-      quad_s.initialize(
-        QGauss<dim>(par.quad_s_degree).get_points(),
-        QGauss<dim>(par.quad_s_degree).get_weights()
-      );
+      quad_s = QGauss<dim>(par.quad_s_degree);
       break;
     case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
-      quad_s.initialize(
-        QIterated<dim>
-        (QTrapez<1>(), par.quad_s_degree).get_points(),
-        QIterated<dim>
-        (QTrapez<1>(), par.quad_s_degree).get_weights()
-      );
+      quad_s = QIterated<dim>(QTrapez<1>(), par.quad_s_degree);
       break;
     case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
-      quad_s.initialize(
-        QIterated<dim>
-        (QMidpoint<1>(), par.quad_s_degree).get_points(),
-        QIterated<dim>
-        (QMidpoint<1>(), par.quad_s_degree).get_weights()
-      );
+      quad_s = QIterated<dim>(QMidpoint<1>(), par.quad_s_degree);
       break;
     default:
+      Assert(false,ExcNotImplemented());
       break;
     }
 
@@ -113,13 +103,6 @@ ImmersedFEMGeneralized<dim>::~ImmersedFEMGeneralized ()
 {
   if (par.save_for_restart)
     save_for_restart();
-
-  delete mapping;
-  global_info_file.close();
-
-  if (par.fsi_bm)
-    fsi_bm_out_file.close();
-
 }
 
 // Determination of the current value of time dependent boundary
@@ -203,8 +186,8 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
       GridGenerator::hyper_shell(tria_s, ring.center,
                                  ring.R, ring.R+ring.w);
 
-      static const HyperShellBoundary<dim> shell_boundary(ring.center);
-      tria_s.set_boundary(0, shell_boundary);
+      static const SphericalManifold<dim> shell_boundary(ring.center);
+      tria_s.set_manifold(0, shell_boundary);
     }
   else if (par.disk_falling_test)
     {
@@ -222,10 +205,9 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
                                 par.ball_center,
                                 par.ball_radius);
 
-      static const HyperBallBoundary<dim> ball_boundary( par.ball_center,
-                                                         par.ball_radius);
+      static const SphericalManifold<dim> ball_boundary( par.ball_center);
 
-      tria_s.set_boundary(0, ball_boundary);
+      tria_s.set_manifold(0, ball_boundary);
     }
   else
     {
@@ -269,13 +251,12 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
   if (par.fsi_bm)
     {
       Point<dim> center_circ(0.2, 0.2);
-      double radius_circ = 0.05;
-      static const HyperBallBoundary<dim> boundary_cyl(center_circ,radius_circ);
+      static const SphericalManifold<dim> boundary_cyl(center_circ);
 
-      tria_f.set_boundary(80, boundary_cyl);
-//  tria_f.set_boundary(81, boundary_cyl);
+      tria_f.set_manifold(80, boundary_cyl);
+//  tria_f.set_manifold(81, boundary_cyl);
 
-//  tria_s.set_boundary(81, boundary_cyl);
+//  tria_s.set_manifold(81, boundary_cyl);
     }
   if (par.brain_mesh)
     {
@@ -327,8 +308,8 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
       << GridTools::maximal_cell_diameter(tria_s)
       << endl;
 
-// Initialization of the boundary_indicators vector.
-  boundary_indicators = tria_f.get_boundary_indicators ();
+// Initialization of the boundary_ids vector.
+  boundary_ids = tria_f.get_boundary_ids ();
 
 
 // Distribution of the degrees of freedom. Both for the solid
@@ -489,9 +470,9 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
   // Initialization of the current state of the system.
   current_xi = previous_xi;
 
-  mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-                                                            previous_xi.block(1),
-                                                            dh_s);
+  mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim>>
+      (par.degree, dh_s, previous_xi.block(1));
+
   if (!par.this_is_a_restart)
     {
       // Write the initial conditions in the output file.
@@ -503,18 +484,18 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 // We now deal with the sparsity patterns.
   {
 
-    BlockCompressedSimpleSparsityPattern csp (2,2);
+    BlockDynamicSparsityPattern dsp (2,2);
 
-    csp.block(0,0).reinit (n_dofs_up, n_dofs_up);
-    csp.block(0,1).reinit (n_dofs_up, n_dofs_W );
-    csp.block(1,0).reinit (n_dofs_W , n_dofs_up);
-    csp.block(1,1).reinit (n_dofs_W , n_dofs_W );
+    dsp.block(0,0).reinit (n_dofs_up, n_dofs_up);
+    dsp.block(0,1).reinit (n_dofs_up, n_dofs_W );
+    dsp.block(1,0).reinit (n_dofs_W , n_dofs_up);
+    dsp.block(1,1).reinit (n_dofs_W , n_dofs_W );
 
 
 // As stated in the documentation, now we <i>must</i> call the function
 // <code>csp.collect_sizes.()</code> since have changed the size
 // of the sub-objects of the object <code>csp</code>.
-    csp.collect_sizes();
+    dsp.collect_sizes();
 
     Table< 2, DoFTools::Coupling > coupling(dim+1,dim+1);
     for (unsigned int i=0; i<dim; ++i)
@@ -542,18 +523,18 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 	std::set<unsigned int>::iterator it = pressure_dofs.begin();
         for (++it; it != pressure_dofs.end(); ++it)
           {
-            csp.block(0,0).add(constraining_dof, *it);
+            dsp.block(0,0).add(constraining_dof, *it);
           }
       }
 
     DoFTools::make_sparsity_pattern (dh_f,
                                      coupling,
-                                     csp.block(0,0),
+                                     dsp.block(0,0),
                                      constraints_f,
                                      true);
-    DoFTools::make_sparsity_pattern (dh_s, csp.block(1,1));
+    DoFTools::make_sparsity_pattern (dh_s, dsp.block(1,1));
 
-    sparsity.copy_from (csp);
+    sparsity.copy_from (dsp);
     assemble_sparsity(*mapping);
   }
 
@@ -576,7 +557,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 // Creating the mass matrix for the solid domain and storing its
 // inverse.
-      ConstantFunction<dim> phi_b_func (par.Phi_B, dim);
+      Functions::ConstantFunction<dim> phi_b_func (par.Phi_B, dim);
       M_gamma3.reinit (sparsity.block(1,1));
 
 
@@ -618,8 +599,8 @@ ImmersedFEMGeneralized<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapp
   FEValues<dim,dim> fe_v(immersed_mapping, fe_s, quad_s,
                          update_quadrature_points);
 
-  CompressedSimpleSparsityPattern sp1(n_dofs_up, n_dofs_W);
-  CompressedSimpleSparsityPattern sp2(n_dofs_W , n_dofs_up);
+  DynamicSparsityPattern sp1(n_dofs_up, n_dofs_W);
+  DynamicSparsityPattern sp2(n_dofs_W , n_dofs_up);
 
   for (; cell != endc; ++cell)
     {
@@ -710,20 +691,14 @@ ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
   bool update_jacobian = !jacobian.empty();
 
 
-// Reset the mapping to NULL.
-  if (mapping != NULL) delete mapping;
-
-
 // In a semi-implicit scheme, the position of the immersed body
 // coincides with the position of the body at the previous time step.
   if (par.semi_implicit == true)
-    mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-                                                              previous_xi.block(1),
-                                                              dh_s);
+    mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim> >
+        (par.degree, dh_s, previous_xi.block(1));
   else
-    mapping = new MappingQEulerian<dim, Vector<double>, dim> (par.degree,
-                                                              xi.block(1),
-                                                              dh_s);
+    mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim> >
+        (par.degree, dh_s, xi.block(1));
 
 
 // In applying the boundary conditions, we set a scaling factor equal
@@ -1341,7 +1316,7 @@ ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
 
 
               if ((!par.semi_implicit) || (!par.use_spread) || par.solid_is_compressible)
-                contract (PeFT, Pe[qs], 2, F[qs], 2);
+                PeFT = contract<1,1> (Pe[qs], F[qs]);
 
 
               //Calculation of the mean elastic stress of a compressible solid
@@ -2121,7 +2096,9 @@ ImmersedFEMGeneralized<dim>::run ()
 
 
 // Time derivative of the system's state.
-          current_xit.sadd (0, 1./par.dt, current_xi, -1./par.dt, previous_xi);
+          current_xit  = current_xi;
+          current_xit -= previous_xi;
+          current_xit /= par.dt;
 
           if (update_Jacobian == true)
             {
@@ -2395,7 +2372,7 @@ ImmersedFEMGeneralized<dim>::output_step
           {
             fe_v.reinit(cell, f);
             fe_v.get_function_values(solution.block(0), local_vp);
-            const vector<Point<dim> > &normals = fe_v.get_normal_vectors();
+            const vector<Tensor<1,dim> > &normals = fe_v.get_normal_vectors();
             for (unsigned int q=0; q<face_quad.size(); ++q)
               {
                 Point<dim> vq;
@@ -2521,7 +2498,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
 // The following variables are used when the
 // <code>CircumferentialFiberModel</code> is used.
-  Point<dim> p;
+  Tensor<1, dim> p;
   Tensor<1, dim, double> etheta;
   Tensor<2, dim, double> etheta_op_etheta;
   Tensor<2, dim, double> tmp;
@@ -2596,8 +2573,8 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
 
           // Find the tensor product of etheta and etheta
-          outer_product(etheta_op_etheta, etheta, etheta);
-          contract (Pe[qs], F, etheta_op_etheta);
+          etheta_op_etheta = outer_product(etheta, etheta);
+          Pe[qs] = contract<1,0> (F, etheta_op_etheta);
           Pe[qs] *= par.mu;
           if ( update_jacobian )
             {
@@ -3163,8 +3140,8 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 
   //: Variables needed for Turek-style calculations
   double gradn_u_t;
-  Point<dim> normal_vector;
-  Point<dim> tangent_vector;
+  Tensor<1,dim> normal_vector;
+  Tensor<1,dim> tangent_vector;
   vector <double> drag_lift_turekstyle(dim);
   double c_L_turekstyle = 0.;
   double c_D_turekstyle = 0.;
@@ -3175,8 +3152,8 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
       for (unsigned int face=0; face < GeometryInfo<dim>::faces_per_cell; ++face)
         {
           if (cell->face(face)->at_boundary()
-              && (cell->face(face)->boundary_indicator() == 80
-                  || (par.cfd_test && cell->face(face)->boundary_indicator() == 81)
+              && (cell->face(face)->manifold_id() == 80
+                  || (par.cfd_test && cell->face(face)->manifold_id() == 81)
                  )
              )
             {
@@ -3197,7 +3174,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
                            + sol_grad_f[q][j][i])
                          - (i == j ? sol_f[q](dim) : 0.0)
                         )
-                        *(-fe_f_face_v.normal_vector(q)(j))
+                        *(-fe_f_face_v.normal_vector(q)[j])
                         *fe_f_face_v.JxW(q);
                   //Turek-style calculations to follow:
                   normal_vector = -fe_f_face_v.normal_vector(q);
@@ -3372,7 +3349,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
         {
           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
             {
-              if (cell_s->face(face)->at_boundary() && (cell_s->face(face)->boundary_indicator() !=81))
+              if (cell_s->face(face)->at_boundary() && (cell_s->face(face)->manifold_id() !=81))
                 {
                   cell_s->get_dof_indices(dofs_s);
 
@@ -3629,8 +3606,8 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 //       for (unsigned int face=0; face < GeometryInfo<dim>::faces_per_cell; ++face)
 //         {
 //           if (cell->face(face)->at_boundary()
-//               && (cell->face(face)->boundary_indicator() == 80
-//                   || (par.cfd_test && cell->face(face)->boundary_indicator() == 81)
+//               && (cell->face(face)->manifold_id() == 80
+//                   || (par.cfd_test && cell->face(face)->manifold_id() == 81)
 //                  )
 //              )
 //             {
@@ -3826,7 +3803,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 //         {
 //           for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell; ++face)
 //             {
-//               if (cell_s->face(face)->at_boundary() && (cell_s->face(face)->boundary_indicator() !=81))
+//               if (cell_s->face(face)->at_boundary() && (cell_s->face(face)->manifold_id() !=81))
 //                 {
 //                   cell_s->get_dof_indices(dofs_s);
 
@@ -4144,7 +4121,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess2()
       for (unsigned int face=0; face < GeometryInfo<dim>::faces_per_cell; ++face)
         {
           if (cell->face(face)->at_boundary()
-              && (cell->face(face)->boundary_indicator() < 80)
+              && (cell->face(face)->manifold_id() < 80)
              )
             {
               fe_f_face_v.reinit (cell, face);
@@ -4162,7 +4139,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess2()
                            + sol_grad_f_face[q][j][i])
                          - (i == j ? sol_f_face[q](dim) : 0.0)
                         )
-                        *(fe_f_face_v.normal_vector(q)(j))
+                        *(fe_f_face_v.normal_vector(q)[j])
                         *fe_f_face_v.JxW(q);
                 }//loop over q
             }//if cond.

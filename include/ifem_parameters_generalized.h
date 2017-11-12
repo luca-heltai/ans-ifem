@@ -127,20 +127,20 @@ public:
 // Maps of boundary value functions: 1st: a boundary indicator;
 // 2nd: a boundary value function.
 
-  map<unsigned char, const Function<dim> *> boundary_map;
+  map<types::boundary_id, const Function<dim> *> boundary_map;
 
 
 // Maps of boundary value functions for homogeneous Dirichlet boundary
 // values: 1st: a boundary indicator; 2nd: a zero boundary value
 // function.
 
-  map<unsigned char, const Function<dim> *> zero_boundary_map;
+  map<types::boundary_id, const Function<dim> *> zero_boundary_map;
 
   //:
 
   bool solid_has_DBC;
 
-  std::map<unsigned char, const Function<dim> *> boundary_map_solid;
+  std::map<types::boundary_id, const Function<dim> *> boundary_map_solid;
 
   std::map<unsigned int, double> boundary_values_solid;
 //:

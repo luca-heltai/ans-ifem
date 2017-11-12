@@ -19,7 +19,7 @@
 // Keywords: fluid-structure interaction, immersed method,
 //           finite elements, monolithic framework
 //
-// Deal.II version:  deal.II 8.2.pre
+// Deal.II version:  deal.II 9.0.pre
 
 /** \mainpage
 

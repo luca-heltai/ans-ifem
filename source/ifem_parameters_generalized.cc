@@ -242,10 +242,10 @@ IFEMParametersGeneralized<dim>::IFEMParametersGeneralized(int argc, char **argv)
 // specified in input, use the default one, else read each additional
 // argument.
   if (argc == 1)
-    this->read_input ("immersed_fem.prm");
+    this->parse_input ("immersed_fem.prm");
   else
     for (int i=1; i<argc; ++i)
-      this->read_input(argv[i]);
+      this->parse_input(argv[i]);
 
 
 // Reading in the parameters.
@@ -352,7 +352,7 @@ IFEMParametersGeneralized<dim>::IFEMParametersGeneralized(int argc, char **argv)
   quad_s_degree = this->get_integer ("Solid quadrature rule degree/copies");
   cout<<" deg/copy="<<quad_s_degree<<endl;
   component_mask[dim] = false;
-  static ZeroFunction<dim> zero (dim+1);
+  static Functions::ZeroFunction<dim> zero (dim+1);
   zero_boundary_map[id] = &zero;
   boundary_map[id] = &u_g;
 
@@ -444,7 +444,7 @@ IFEMParametersGeneralized<dim>::IFEMParametersGeneralized(int argc, char **argv)
 
   only_NS = this->get_bool("Solve only NS component");
 
-  static ZeroFunction<dim> zero_solid (dim);
+  static Functions::ZeroFunction<dim> zero_solid (dim);
 
   if (fsi_bm) //This just to do with the way in which the boundary ids are set up for the meshes for the FSI BM problem
     {
