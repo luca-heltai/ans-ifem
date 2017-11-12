@@ -28,11 +28,11 @@ using namespace std;
 
 template <int dim>
 IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
-		W_0(dim),
-		u_0(dim+1),
-		u_g(dim+1),
-		force(dim+1),
-		component_mask(dim+1, true)
+  W_0(dim),
+  u_0(dim+1),
+  u_g(dim+1),
+  force(dim+1),
+  component_mask(dim+1, true)
 {
 
 // Declaration of parameters for the ParsedFunction objects in the
@@ -51,7 +51,7 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
   this->enter_subsection("ug");
   ParsedFunction<dim>::declare_parameters(*this, dim+1);
   this->declare_entry("Function expression", "if(y>0.99, 1, 0); 0; 0",
-	  Patterns::Anything());
+                      Patterns::Anything());
   this->leave_subsection();
 
   this->enter_subsection("force");
@@ -149,11 +149,11 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
 // Specification of the parmeter file. If no parameter file is
 // specified in input, use the default one, else read each additional
 // argument.
-  if(argc == 1) 
-    this->read_input ("immersed_fem.prm");
+  if (argc == 1)
+    this->parse_input ("immersed_fem.prm");
   else
-    for(int i=1; i<argc; ++i)
-      this->read_input(argv[i]);
+    for (int i=1; i<argc; ++i)
+      this->parse_input(argv[i]);
 
 
 // Reading in the parameters.
@@ -179,8 +179,8 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
   T = this->get_double ("Final t");
   update_jacobian_continuously = this->get_bool ("Update J cont");
   update_jacobian_at_step_beginning = this->get_bool (
-    "Force J update at step beginning"
-  );
+                                        "Force J update at step beginning"
+                                      );
 
   rho = this->get_double ("Density");
   eta = this->get_double ("Viscosity");
@@ -198,21 +198,21 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
   unsigned char id = this->get_integer ("Dirichlet BC indicator");
   all_DBC = this->get_bool ("All Dirichlet BC");
   output_interval = this->get_integer (
-    "Interval (of time-steps) between output"
-  );
+                      "Interval (of time-steps) between output"
+                    );
   use_spread =this->get_bool ("Use spread operator");
 
-  if(this->get("Solid constitutive model") == string("INH_0"))
+  if (this->get("Solid constitutive model") == string("INH_0"))
     material_model = INH_0;
   else if (this->get("Solid constitutive model") == string("INH_1"))
     material_model = INH_1;
   else if (this->get("Solid constitutive model")
-	   == string("CircumferentialFiberModel"))
+           == string("CircumferentialFiberModel"))
     material_model = CircumferentialFiberModel;
   else
     cout
-      << " No matching constitutive model found! Using INH_0."
-      << endl;
+        << " No matching constitutive model found! Using INH_0."
+        << endl;
 
   component_mask[dim] = false;
   static ZeroFunction<dim> zero (dim+1);
@@ -224,12 +224,12 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv) :
   fe_p_name = this->get ("Finite element for pressure");
   fe_p_name +="<dim>(" + Utilities::int_to_string(degree-1) + ")";
 
-   this->enter_subsection (
-					 "Equilibrium Solution of Ring with Circumferential Fibers"
-						   );
-   ring_center[0] = this->get_double ("x-coordinate of the center of the ring");
-   ring_center[1] = this->get_double ("y-coordinate of the center of the ring");
-   this->leave_subsection();
+  this->enter_subsection (
+    "Equilibrium Solution of Ring with Circumferential Fibers"
+  );
+  ring_center[0] = this->get_double ("x-coordinate of the center of the ring");
+  ring_center[1] = this->get_double ("y-coordinate of the center of the ring");
+  this->leave_subsection();
 
 
 // The following lines help keeping track of what prm file goes

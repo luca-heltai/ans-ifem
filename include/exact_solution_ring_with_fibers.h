@@ -39,39 +39,39 @@ template<int dim>
 class ExactSolutionRingWithFibers :
   public Function<dim>
 {
-  public:
+public:
 
 //! No default constructor is defined. Simulation objects must be
 //! initialized by assigning the simulation parameters, which are
 //! elements of objects of type <code>IFEMParameters</code>.
 
-    ExactSolutionRingWithFibers (IFEMParameters<dim> &par);
+  ExactSolutionRingWithFibers (IFEMParameters<dim> &par);
 
-    void vector_value (const Point <dim> &p,
-                       Vector <double> &values) const;
+  void vector_value (const Point <dim> &p,
+                     Vector <double> &values) const;
 
-    void vector_value_list(const vector< Point<dim> > &points,
-                           vector <Vector <double> > &values ) const;
+  void vector_value_list(const vector< Point<dim> > &points,
+                         vector <Vector <double> > &values ) const;
 
 //! Inner radius of the ring.
 
-    double R;
+  double R;
 
 //! Width of the ring.
 
-    double w;
+  double w;
 
 //! Edge length of the square control volume.
 
-    double l;
+  double l;
 
 //! Center of the ring.
 
-    Point<dim> center;
+  Point<dim> center;
 
-  private:
+private:
 
-    IFEMParameters<dim> &par;
+  IFEMParameters<dim> &par;
 };
 
 #endif
