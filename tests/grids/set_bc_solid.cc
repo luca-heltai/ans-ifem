@@ -27,14 +27,14 @@ main()
     for(unsigned int f=0; f < GeometryInfo<3>::faces_per_cell; ++f)
       if(cell->face(f)->at_boundary()) {
 	// if(std::abs(cell->face(f)->center()[0])<1e-10) {// x=0 
-	//   cell->face(f)->set_boundary_indicator(1); // 1 = inflow
+	//   cell->face(f)->set_boundary_id(1); // 1 = inflow
 	//   deallog << "Inflow: " << cell->face(f) 
 	// 	  << ", face center: " << cell->face(f)->center() 
 	// 	  << std::endl;
 	// }
 	// else
 	  if(std::abs(cell->face(f)->center()[0] - 5.5)>1e-9) {
-	  cell->face(f)->set_boundary_indicator(1); // 0 = fixed bc, 1 = neumann
+	  cell->face(f)->set_boundary_id(1); // 0 = fixed bc, 1 = neumann
 	  deallog << "Outflow: " << cell->face(f) 
 		  << ", face center: " << cell->face(f)->center() 
 		  << std::endl;

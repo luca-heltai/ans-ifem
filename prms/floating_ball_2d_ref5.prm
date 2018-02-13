@@ -1,0 +1,89 @@
+set All Dirichlet BC                        = false
+set Delta t                                 = .001
+set Dirichlet BC indicator                  = 0
+set Final t                                 = 10
+set Finite element for pressure             = FE_DGP
+set Fix one dof of p                        = false
+set Fluid density                           = 1
+set Fluid mesh                              = ../meshes/fluid_square_neumann.inp
+set Solid mesh                              = ../meshes/floating_ball_ref4.msh
+set Solid refinement                        = 0
+set Fluid refinement                        = 5
+set Fluid viscosity                         = 0.01
+set Force J update at step beginning        = false
+set Initial t                               = 0.
+set Interval (of time-steps) between output = 1
+set Output base name                        = out/floating
+set Phi_B                                   = 1
+set Semi-implicit scheme                    = true
+set Solid Poisson's ratio                   = .4
+set Solid constitutive model                = CNH_W1
+set Solid density                           = 0.8
+set Solid elastic modulus                   = 20
+set Solid is compressible                   = true
+set Solid pressure constant, c1             = 1.
+set Solid pressure constant, c2             = 0
+set Solid quadrature rule                   = QIter+QTrapez
+set Solid quadrature rule degree/copies     = 5
+set Solid residual pressure                 = 0
+set Solid viscosity                         = 2
+set Solve only NS component                 = false
+set Time-dependent Stokes flow              = false
+set Turek-Hron CFD Benchmark test           = false
+set Turek-Hron CSM Benchmark test           = false
+set Turek-Hron FSI Benchmark test           = false
+set Turek-Hron test-- Impose DBC for solid  = false
+set Update J cont                           = false
+set Use spread operator                     = true
+set Velocity finite element degree          = 2
+
+subsection For restart
+  set File prefix used for files needed for restart = -restart-
+  set Save data for a possible restart              = true
+  set This is a restart                             = false
+end
+subsection Point source
+  set List of location(s) of point source(s): = (0.5, 0.5)
+  set Number of point sources present         = 0
+  subsection Strength of point source no.1
+    set Function constants  = 
+    set Function expression = 0
+    set Variable names      = x,y,t
+  end
+  subsection Strength of point source no.2
+    set Function constants  = 
+    set Function expression = 0
+    set Variable names      = x,y,t
+  end
+  subsection Strength of point source no.3
+    set Function constants  = 
+    set Function expression = 0
+    set Variable names      = x,y,t
+  end
+  subsection Strength of point source no.4
+    set Function constants  = 
+    set Function expression = 0
+    set Variable names      = x,y,t
+  end
+end
+subsection W0
+  set Function constants  = lambda=.7, xc=.6, yc=.4
+  set Function expression = (lambda-1)*x+xc; (lambda-1)*y+yc
+#  set Function expression = 0; 0
+  set Variable names      = x,y,t
+end
+subsection force
+  set Function constants  = 
+  set Function expression = 0; -10; 0
+  set Variable names      = x,y,t
+end
+subsection u0
+  set Function constants  = 
+  set Function expression = 0; 0; 0
+  set Variable names      = x,y,t
+end
+subsection ug
+  set Function constants  = 
+  set Function expression = 0; 0; 0
+  set Variable names      = x,y,t
+end

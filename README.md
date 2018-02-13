@@ -13,12 +13,14 @@ Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
 
 This code was developed starting from the example
 step-33 of the deal.II FEM library, and it is the companion code to
-the article 
+the articles
 
-"A Fully Coupled Immersed Finite Element Method for Fluid 
-Structure Interaction via the Deal.II Library", 
-Archive of Numerical Software, 2014, 2(1), pag. 1--27.
- 
+- S. Roy, L. Heltai, and F. Costanzo. Benchmarking the immersed finite element method for fluid-structure interaction problems. Computers and Mathematics with Applications, 69:1167–1188, 2015.
+
+- L. Heltai, S. Roy, and F. Costanzo. A fully coupled immersed finite element method for fluid structure interaction via the deal.ii library. Archive of Numerical Software, 2(1):1–27, 2014.
+
+- L. Heltai and F. Costanzo. Variational implementation of immersed finite element methods. Computer Methods in Applied Mechanics and Engineering, 229–232(0):110 – 127, 2012
+
 This file is subject to LGPL version 2.1 or later and may not be
 distributed without copyright and license information. Please refer to
 section 5 and 6 of this file for further information on this license.
@@ -26,8 +28,7 @@ section 5 and 6 of this file for further information on this license.
 1. Deal.II Requirements:
 ========================
 
-The FEIBM source code requires the deal.II 8.4 library or greater. It
-has also been tested with the current git release deal.II 8.5.pre.
+The FEIBM source code requires the deal.II 9.0 library or greater.
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory
@@ -39,17 +40,12 @@ point to the correct location. If this enviroment variable is not set,
 the user should specify it by hand when running cmake in order for
 cmake to properly locate the deal.II library. For the program to work
 properly, deal.II should be configured with support for UMFPACK.
-  
+
 2. Installation procedure:
 ==========================
 
-The provided archive should be unzipped in a dedicated 
-subdirectory, with the commands
-
-	cd PATH_WHERE_YOU_WANT_THIS_CODE
-	tar xvfz ans-ifem-vXXX.tgz
-	
-or cloned using git
+The provided archive should be cloned in a dedicated
+subdirectory using git
 
 	git clone https://github.com/luca-heltai/ans-ifem
 
@@ -59,33 +55,33 @@ The program can then be compiled by running
 	cd build
 	cmake -DDEAL_II_DIR=/path/to/deal.II ..
 	make
-	
+
 3. Running instructions:
 ========================
 
 Once the program has been compiled, it can be run by typing 
 
-	./ifem
+	./ifem_2d.g
 
-or 
+or
 
 	./ifem parameters.prm
 
-in the directory ans-ifem.
+in the directory `build`.
 The program uses parameter files to set its runtime variables. The
-file 
+file
 
-	immersed_fem.prm 
+	immersed_fem.prm
 
 is an example of such files, and it is the default one used if none is
 specified at run time. If the specified file does not exists, the
-program will attempt to create one with default values for you. 
-The directory 
+program will attempt to create one with default values for you.
+The directory
 
 	prms/
 
 contains all parameter files used to produce the results presented in
-the paper.
+the above papers.
 
 4. Extensive documentation:
 ===========================
@@ -98,7 +94,7 @@ setting the cmake varibale BUILD_DOCUMENTATION=ON
 
 and then running
 
-	make docs
+	make doc
 
 In this case, the documentation will be accessible in the subdirectory
 
@@ -110,12 +106,12 @@ downloaded to the program directory before making the documentation,
 for example, usgin wget
 
 	wget http://www.dealii.org/developer/doxygen/deal.tag
-	make docs
+	make doc
 
 5. Licence Informations
 =======================
 
-The step-feibm library has been placed under an Open Source license,
+The `feibm` library has been placed under an Open Source license,
 in the sense advocated by the Open Source Initiative.
 
 However, this program is not in the public domain, it is property of
