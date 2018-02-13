@@ -1,7 +1,9 @@
 IFEM source code
 ================
 
-Copyright (C) 2014 by 
+[![Build Status](https://travis-ci.org/luca-heltai/ans-ifem.svg?branch=master)](https://travis-ci.org/luca-heltai/ans-ifem)
+
+Copyright (C) 2014-2018 by 
 Luca Heltai (1), Saswati Roy (2), and Francesco Costanzo (3)
 
 (1) Scuola Internazionale Superiore di Studi Avanzati
@@ -28,7 +30,12 @@ section 5 and 6 of this file for further information on this license.
 1. Deal.II Requirements:
 ========================
 
-The FEIBM source code requires the deal.II 9.0 library or greater.
+The FEIBM source code requires the deal.II 8.4 library or greater. Tags
+corresponding to each release of the deal.II library are available. You 
+should use the tag corresponding to the installed deal.II library.
+
+The master branch of the github repository should compile with the latest 
+deal.II library. If not, submit an issue.
 
 In what follows, we assume that the user has installed the deal.II
 library in the directory

@@ -1,0 +1,22 @@
+sudo: required
+
+env:
+  - BUILD_TYPE=Release
+  - BUILD_TYPE=Debug
+
+services:
+  - docker
+
+notifications:
+  email: false
+
+language: C++
+
+before_install:
+- docker pull dealii/dealii
+- ./scripts/dr.sh "cd app; ./scripts/check_indentation.sh"
+
+script:
+#- ./scripts/dr.sh "test -d app/build-travis && rm -rf app/build-travis; mkdir app/build-travis; cd app/build-travis; cmake -GNinja ../; ninja -j1"
+- ./scripts/dr.sh "cd app/build-travis; cmake -GNinja ../; ninja -j1"
+- ./scripts/dr.sh "cd app/build-travis; ninja setup_tests; ctest -N; ctest -V"
