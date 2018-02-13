@@ -9,7 +9,7 @@
 //    It runs the <code>create_triangulation_and_dofs</code> function.
 
 template <int dim>
-PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
+PostProcessor<dim>::PostProcessor (IFEMParameters<dim> &par)
   :
   par (par),
   fe_f (
@@ -36,13 +36,13 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
 
   switch (par.quad_s_type)
     {
-    case IFEMParametersGeneralized<dim>::QGauss :
+    case IFEMParameters<dim>::QGauss :
       quad_s.initialize(
         QGauss<dim>(par.quad_s_degree).get_points(),
         QGauss<dim>(par.quad_s_degree).get_weights()
       );
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
+    case IFEMParameters<dim>::Qiter_Qtrapez :
       quad_s.initialize(
         QIterated<dim>
         (QTrapez<1>(), par.quad_s_degree).get_points(),
@@ -50,7 +50,7 @@ PostProcessor<dim>::PostProcessor (IFEMParametersGeneralized<dim> &par)
         (QTrapez<1>(), par.quad_s_degree).get_weights()
       );
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
+    case IFEMParameters<dim>::Qiter_Qmidpoint :
       quad_s.initialize(
         QIterated<dim>
         (QMidpoint<1>(), par.quad_s_degree).get_points(),

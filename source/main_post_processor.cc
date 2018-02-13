@@ -256,7 +256,7 @@ where we have used the following parameters: \f$\rho=1.0\,{\rm kg}/{\rm m}^3\f$,
  */
 
 #include "post_processor.h"
-#include "ifem_parameters_generalized.h"
+#include "ifem_parameters.h"
 
 using namespace std;
 
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 {
   try
     {
-      IFEMParametersGeneralized<3> par(argc,argv);
+      IFEMParameters<3> par(argc,argv);
       PostProcessor<3> test (par);
       test.run ();
     }

@@ -13,8 +13,8 @@
 // http://www.dealii.org/ -> License for the text and further
 // information on this license.
 
-#ifndef immersed_fem_generalized_h
-#define immersed_fem_generalized_h
+#ifndef immersed_fem_h
+#define immersed_fem_h
 
 #include <deal.II/grid/tria.h>
 
@@ -24,6 +24,7 @@
 #include <deal.II/base/quadrature_lib.h>
 #include <deal.II/base/utilities.h>
 #include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/patterns.h>
 
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/sparse_matrix.h>
@@ -73,16 +74,22 @@
 #include <typeinfo>
 
 // Our own include files
-#include "ifem_parameters_generalized.h"
+#include "ifem_parameters.h"
 #include "exact_solution_ring_with_fibers.h"
 
 using namespace std;
+
+template <typename T>
+std::string to_string(const T &object)
+{
+  return Patterns::Tools::Convert<T>::to_string(object);
+}
 
 //! This class defines simulations objects. The only method in the public
 //! interface is <code>run()</code>, which is invoked to carry out the
 //! simulation.
 template <int dim>
-class ImmersedFEMGeneralized
+class IFEM
 {
 public:
 
@@ -91,8 +98,8 @@ public:
   // initialized by assigning the simulation parameters, which are
   // elements of objects of type IFEMParametersGeneralized.
 
-  ImmersedFEMGeneralized(IFEMParametersGeneralized<dim> &par);
-  ~ImmersedFEMGeneralized();
+  IFEM(IFEMParameters<dim> &par);
+  ~IFEM();
 
   void run ();
 
@@ -101,7 +108,7 @@ private:
 
   // The parameters of the problem.
 
-  IFEMParametersGeneralized<dim> &par;
+  IFEMParameters<dim> &par;
 
 
   // Vector of boundary indicators. The type of this vector matches the
@@ -124,11 +131,7 @@ private:
   // Triangulations of the immersed domain (solid domain).  Following
   // <code>deal.II</code> conventions, a triangulation pertains to a manifold
   // of dimension <i>dim</i> embedded in a space of dimension
-  // <i>spacedim</i>. While in this case the two dimension parameters
-  // are set equal to each other, it is possible to formulate problems
-  // in which the immersed domain is a manifold of dimension lower than
-  // that of the containing space.
-
+  // <i>spacedim</i>.
   Triangulation<dim, dim> tria_s;
 
 

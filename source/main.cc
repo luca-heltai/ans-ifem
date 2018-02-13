@@ -19,7 +19,7 @@
 // Keywords: fluid-structure interaction, immersed method,
 //           finite elements, monolithic framework
 //
-// Deal.II version:  deal.II 8.2.pre
+// Deal.II version:  deal.II 9.pre
 
 /** \mainpage
 
@@ -96,7 +96,7 @@ The motion of the system is governed by the following three equations, which, re
     \nabla \cdot u(x,t) = 0 \quad {\rm in}~\Omega, \quad
     u(x,t)\big|_{x = s + w(s,t)} = \frac{\partial w(s,t)}{\partial t} \quad {\rm in}~B,
 @f]
-where "\f$\nabla_{x} \cdot\f$" denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
+where \f$\nabla_{x} \cdot\f$ denotes the divergence operator (relative to position in the current configuration), \f$\rho\f$ is the density (here assumed to be a constant), \f$b\f$ is a (prescribed) body force field, and where \f$\sigma(x,t)\f$ is the Cauchy stress field in the entire domain \f$\Omega\f$, i.e., \f$\sigma(x,t) = \sigma_{f}(x,t)\f$ for \f$x \in \Omega/B_{t}\f$ and \f$\sigma(x,t) = \sigma_{s}(x,t)\f$ for \f$x \in B_{t}\f$.
 </p>
 
 <p>
@@ -255,8 +255,8 @@ where we have used the following parameters: \f$\rho=1.0\,{\rm kg}/{\rm m}^3\f$,
 
  */
 
-#include "immersed_fem_generalized.h"
-#include "ifem_parameters_generalized.h"
+#include "ifem.h"
+#include "ifem_parameters.h"
 
 using namespace std;
 
@@ -266,8 +266,8 @@ int main(int argc, char **argv)
 {
   try
     {
-      IFEMParametersGeneralized<3> par(argc,argv);
-      ImmersedFEMGeneralized<3> test (par);
+      IFEMParameters<DIMENSION> par(argc,argv);
+      IFEM<DIMENSION> test (par);
       test.run ();
     }
   catch (exception &exc)

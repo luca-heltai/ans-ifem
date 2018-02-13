@@ -1,4 +1,5 @@
-#include "immersed_fem_generalized.h"
+#include "ifem.h"
+#include "ifem_parameters.h"
 #include <deal.II/base/std_cxx14/memory.h>
 
 // #include <boost/filesystem.hpp>
@@ -34,7 +35,7 @@ void move_file (const string &old_name,
 //    It runs the <code>create_triangulation_and_dofs</code> function.
 
 template <int dim>
-ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<dim> &par)
+IFEM<dim>::IFEM (IFEMParameters<dim> &par)
   :
   par (par),
   fe_f (
@@ -61,13 +62,13 @@ ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<d
 
   switch (par.quad_s_type)
     {
-    case IFEMParametersGeneralized<dim>::QGauss :
+    case IFEMParameters<dim>::QGauss :
       quad_s = QGauss<dim>(par.quad_s_degree);
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
+    case IFEMParameters<dim>::Qiter_Qtrapez :
       quad_s = QIterated<dim>(QTrapez<1>(), par.quad_s_degree);
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
+    case IFEMParameters<dim>::Qiter_Qmidpoint :
       quad_s = QIterated<dim>(QMidpoint<1>(), par.quad_s_degree);
       break;
     default:
@@ -91,15 +92,13 @@ ImmersedFEMGeneralized<dim>::ImmersedFEMGeneralized (IFEMParametersGeneralized<d
     }
 
   create_triangulation_and_dofs ();
-
-
 }
 
 // Distructor: deletion of pointers created with <code>new</code> and
 // closing of the record keeping file.
 
 template <int dim>
-ImmersedFEMGeneralized<dim>::~ImmersedFEMGeneralized ()
+IFEM<dim>::~IFEM ()
 {
   if (par.save_for_restart)
     save_for_restart();
@@ -110,7 +109,7 @@ ImmersedFEMGeneralized<dim>::~ImmersedFEMGeneralized ()
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::compute_current_bc (const double t)
+IFEM<dim>::compute_current_bc (const double t)
 {
   par.u_g.set_time(t);
   VectorTools::interpolate_boundary_values (
@@ -131,7 +130,7 @@ ImmersedFEMGeneralized<dim>::compute_current_bc (const double t)
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::apply_current_bc
+IFEM<dim>::apply_current_bc
 (
   BlockVector<double> &vec,
   const double t
@@ -167,112 +166,47 @@ ImmersedFEMGeneralized<dim>::apply_current_bc
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
+IFEM<dim>::create_triangulation_and_dofs ()
 {
+  tria_f.clear();
+  tria_s.clear();
 
-  if (par.material_model == IFEMParametersGeneralized<dim>::CircumferentialFiberModel)
-    {
-// This is used only by the solution of the problem with the immersed
-// domain consisting of a circular cylinder.  We only implemented this
-// in two dimensions.
-      Assert(dim == 2, ExcNotImplemented());
+  // As specified in the documentation for the "GridIn" class the
+  // triangulation corresponding to a grid needs to be empty at
+  // this time.
+  GridIn<dim> grid_in_f;
+  grid_in_f.attach_triangulation (tria_f);
 
-      ExactSolutionRingWithFibers<dim> ring(par);
-
-// Construct the square domain for the control volume using the parameter file.
-      GridGenerator::hyper_cube (tria_f, 0., ring.l);
-
-// Construct the hyper shell using the parameter file.
-      GridGenerator::hyper_shell(tria_s, ring.center,
-                                 ring.R, ring.R+ring.w);
-
-      static const SphericalManifold<dim> shell_boundary(ring.center);
-      tria_s.set_manifold(0, shell_boundary);
-    }
-  else if (par.disk_falling_test)
-    {
-      Assert(dim == 2, ExcNotImplemented());
-
-      // Construct a rectangular domain for the control volume using the parameter file.
-      GridGenerator::hyper_rectangle (tria_f,
-                                      par.rectangle_bl,
-                                      par.rectangle_tr,
-                                      par.colorize_boundary
-                                     );
-
-      // Construct a hyper ball to represent the solid using the parameter file.
-      GridGenerator::hyper_ball(tria_s,
-                                par.ball_center,
-                                par.ball_radius);
-
-      static const SphericalManifold<dim> ball_boundary( par.ball_center);
-
-      tria_s.set_manifold(0, ball_boundary);
-    }
-  else
-    {
-      // As specified in the documentation for the "GridIn" class the
-      // triangulation corresponding to a grid needs to be empty at
-      // this time.
-      GridIn<dim> grid_in_f;
-      grid_in_f.attach_triangulation (tria_f);
-
-      {
-        ifstream file (par.fluid_mesh.c_str());
-        Assert (file, ExcFileNotOpen (par.fluid_mesh.c_str()));
+  {
+    ifstream file (par.fluid_mesh.c_str());
+    Assert (file, ExcFileNotOpen (par.fluid_mesh.c_str()));
 
 
-        // A grid in ucd format is expected.
-        if (boost::filesystem::extension(par.fluid_mesh) == "msh")
-          grid_in_f.read_msh (file);
-        else if (boost::filesystem::extension(par.fluid_mesh) == "inp")
-          grid_in_f.read_ucd (file);
-        else
-          AssertThrow(false, ExcMessage("Input file not supported."));
+    // A grid in ucd or msh format is expected.
+    if (boost::filesystem::extension(par.fluid_mesh) == "msh")
+      grid_in_f.read_msh (file);
+    else if (boost::filesystem::extension(par.fluid_mesh) == "inp")
+      grid_in_f.read_ucd (file);
+    else
+      AssertThrow(false, ExcMessage("Input file not supported."));
 
-      }
+  }
 
-      GridIn<dim, dim> grid_in_s;
-      grid_in_s.attach_triangulation (tria_s);
+  {
+    GridIn<dim, dim> grid_in_s;
+    grid_in_s.attach_triangulation (tria_s);
 
-      ifstream file (par.solid_mesh.c_str());
-      Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
+    ifstream file (par.solid_mesh.c_str());
+    Assert (file, ExcFileNotOpen (par.solid_mesh.c_str()));
 
-// A grid in ucd format is expected.
-      // A grid in ucd format is expected.
-      if (boost::filesystem::extension(par.solid_mesh) == "msh")
-        grid_in_f.read_msh (file);
-      else if (boost::filesystem::extension(par.solid_mesh) == "inp")
-        grid_in_f.read_ucd (file);
-      else
-        AssertThrow(false, ExcMessage("Input file not supported."));
-    }
-
-  if (par.fsi_bm)
-    {
-      Point<dim> center_circ(0.2, 0.2);
-      static const SphericalManifold<dim> boundary_cyl(center_circ);
-
-      tria_f.set_manifold(80, boundary_cyl);
-//  tria_f.set_manifold(81, boundary_cyl);
-
-//  tria_s.set_manifold(81, boundary_cyl);
-    }
-  if (par.brain_mesh)
-    {
-      par.enter_subsection("Grid parameters for brain mesh");
-      double scale_factor= par.get_double("Scaling factor");
-      double shift_x =par.get_double("Translation x-dirn");
-      double shift_y =par.get_double("Translation y-dirn");
-      par.leave_subsection();
-
-      cout<<"Brain mesh shift"<<shift_x<<","<<shift_y<<", scale="<<scale_factor<<endl;
-      //Transformations for the brain mesh only:
-      GridTools::shift(Point<dim>(shift_x,shift_y), tria_s);
-      GridTools::scale(scale_factor, tria_s);
-
-    }
-
+    // A grid in ucd or msh format is expected.
+    if (boost::filesystem::extension(par.solid_mesh) == "msh")
+      grid_in_s.read_msh (file);
+    else if (boost::filesystem::extension(par.solid_mesh) == "inp")
+      grid_in_s.read_ucd (file);
+    else
+      AssertThrow(false, ExcMessage("Input file not supported."));
+  }
   cout
       << "Number of fluid refines = "
       << par.ref_f
@@ -310,6 +244,8 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 // Initialization of the boundary_ids vector.
   boundary_ids = tria_f.get_boundary_ids ();
+
+  cout << "Fluid boundary ids = " << to_string(boundary_ids) << endl;
 
 
 // Distribution of the degrees of freedom. Both for the solid
@@ -582,7 +518,7 @@ ImmersedFEMGeneralized<dim>::create_triangulation_and_dofs ()
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
+IFEM<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapping)
 {
   FEFieldFunction<dim, DoFHandler<dim>, Vector<double> > up_field (dh_f, tmp_vec_n_dofs_up);
 
@@ -629,7 +565,7 @@ ImmersedFEMGeneralized<dim>::assemble_sparsity (Mapping<dim, dim> &immersed_mapp
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::get_area_and_first_pressure_dof ()
+IFEM<dim>::get_area_and_first_pressure_dof ()
 {
   area = 0.0;
   typename DoFHandler<dim,dim>::active_cell_iterator
@@ -676,7 +612,7 @@ ImmersedFEMGeneralized<dim>::get_area_and_first_pressure_dof ()
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
+IFEM<dim>::residual_and_or_Jacobian
 (
   BlockVector<double> &residual,
   BlockSparseMatrix<double> &jacobian,
@@ -2041,7 +1977,7 @@ ImmersedFEMGeneralized<dim>::residual_and_or_Jacobian
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::run ()
+IFEM<dim>::run ()
 {
   double res_norm = 0.0;
 
@@ -2253,7 +2189,7 @@ ImmersedFEMGeneralized<dim>::run ()
     }
 // End of the cycle over time.
 
-  if (par.material_model == IFEMParametersGeneralized<dim>::CircumferentialFiberModel)
+  if (par.material_model == IFEMParameters<dim>::CircumferentialFiberModel)
     calculate_error();
 
 }
@@ -2264,7 +2200,7 @@ ImmersedFEMGeneralized<dim>::run ()
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::output_step
+IFEM<dim>::output_step
 (
   const double t,
   const BlockVector<double> &solution,
@@ -2425,7 +2361,7 @@ ImmersedFEMGeneralized<dim>::output_step
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::get_Agamma_values
+IFEM<dim>::get_Agamma_values
 (
   const FEValues<dim,dim> &fe_v_s,
   const vector< unsigned int > &dofs,
@@ -2477,7 +2413,7 @@ ImmersedFEMGeneralized<dim>::get_Agamma_values
 template <int dim>
 template <class FEVal>
 void
-ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
+IFEM<dim>::get_Pe_F_and_DPeFT_dxi_values (
   const FEVal &fe_v_s,
   const vector< unsigned int > &dofs,
   const Vector<double> &xi,
@@ -2518,7 +2454,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
       switch (par.material_model)
         {
-        case IFEMParametersGeneralized<dim>::INH_0:
+        case IFEMParameters<dim>::INH_0:
           Pe[qs] = par.mu * ( F - transpose( invert(F) ) );
           if ( update_jacobian )
             {
@@ -2541,7 +2477,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
                 }
             }
           break;
-        case IFEMParametersGeneralized<dim>::INH_1 :
+        case IFEMParameters<dim>::INH_1 :
           Pe[qs] = par.mu * F;
           if ( update_jacobian )
             {
@@ -2564,7 +2500,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
                 }
             }
           break;
-        case IFEMParametersGeneralized<dim>::CircumferentialFiberModel:
+        case IFEMParameters<dim>::CircumferentialFiberModel:
           p = fe_v_s.quadrature_point(qs) - par.ring_center;
 
           // Find the unit vector along the tangential direction
@@ -2597,7 +2533,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
                 }
             }
           break;
-        case IFEMParametersGeneralized<dim>::CNH_W1 :
+        case IFEMParameters<dim>::CNH_W1 :
           J = determinant(F);
 
           beta = par.nu/(1 - 2 * par.nu);
@@ -2635,7 +2571,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
                 }
             }
           break;
-        case IFEMParametersGeneralized<dim>::CNH_W2 :
+        case IFEMParameters<dim>::CNH_W2 :
           J = determinant(F);
           beta = par.nu/(1 - 2 * par.nu);
 
@@ -2673,7 +2609,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
                 }
             }
           break;
-        case IFEMParametersGeneralized<dim>::STVK :
+        case IFEMParameters<dim>::STVK :
           // Saint-Venant Kirchhoff material given as: P=F(2*mu*E + lambda*tr(E)*I)
           // which will be represented here as P=F(2*mu*tmp + beta*tr(tmp)I)
           beta = 2.0 * par.mu * par.nu/(1.0 - 2.0 *par.nu);
@@ -2753,7 +2689,7 @@ ImmersedFEMGeneralized<dim>::get_Pe_F_and_DPeFT_dxi_values (
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::get_inverse_transpose
+IFEM<dim>::get_inverse_transpose
 (const vector < Tensor <2, dim> > &F,
  vector < Tensor <2, dim> > &local_invFT)
 {
@@ -2766,7 +2702,7 @@ ImmersedFEMGeneralized<dim>::get_inverse_transpose
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::distribute_residual
+IFEM<dim>::distribute_residual
 (
   Vector<double> &residual,
   const vector<double> &local_res,
@@ -2782,7 +2718,7 @@ ImmersedFEMGeneralized<dim>::distribute_residual
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::distribute_jacobian
+IFEM<dim>::distribute_jacobian
 (
   SparseMatrix<double> &Jacobian,
   const FullMatrix<double> &local_Jac,
@@ -2803,7 +2739,7 @@ ImmersedFEMGeneralized<dim>::distribute_jacobian
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::apply_constraints
+IFEM<dim>::apply_constraints
 (
   vector<double> &local_res,
   FullMatrix<double> &local_jacobian,
@@ -2869,7 +2805,7 @@ ImmersedFEMGeneralized<dim>::apply_constraints
 // Assemble the pressure constraint into the residual.
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
+IFEM<dim>::distribute_constraint_on_pressure
 (
   Vector<double> &residual,
   const double average_pressure
@@ -2881,7 +2817,7 @@ ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
 // Assemble the pressure constraint into the Jacobian.
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
+IFEM<dim>::distribute_constraint_on_pressure
 (
   SparseMatrix<double> &jacobian,
   const vector<double> &pressure_coefficient,
@@ -2903,7 +2839,7 @@ ImmersedFEMGeneralized<dim>::distribute_constraint_on_pressure
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::localize
+IFEM<dim>::localize
 (
   Vector<double> &local_M_gamma3_inv_A_gamma,
   const Vector<double> &M_gamma3_inv_A_gamma,
@@ -2918,7 +2854,7 @@ ImmersedFEMGeneralized<dim>::localize
 // Determination of the volume flux vector corresponding to the point source.
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::get_volume_flux_vector (const double t)
+IFEM<dim>::get_volume_flux_vector (const double t)
 {
   double strength;
 
@@ -2954,7 +2890,7 @@ ImmersedFEMGeneralized<dim>::get_volume_flux_vector (const double t)
 
 template <int dim>
 void
-ImmersedFEMGeneralized<dim>::calculate_error () const
+IFEM<dim>::calculate_error () const
 {
   ExactSolutionRingWithFibers<dim> exact_sol(par);
 
@@ -3007,13 +2943,13 @@ ImmersedFEMGeneralized<dim>::calculate_error () const
   string quad_name;
   switch (par.quad_s_type)
     {
-    case IFEMParametersGeneralized<dim>::QGauss :
+    case IFEMParameters<dim>::QGauss :
       quad_name ="QG-"+Utilities::int_to_string(par.quad_s_degree) ;
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qtrapez :
+    case IFEMParameters<dim>::Qiter_Qtrapez :
       quad_name ="QI-QT-"+Utilities::int_to_string(par.quad_s_degree) ;
       break;
-    case IFEMParametersGeneralized<dim>::Qiter_Qmidpoint :
+    case IFEMParameters<dim>::Qiter_Qmidpoint :
       quad_name = "QI-QM-"+Utilities::int_to_string(par.quad_s_degree);
       break;
     default:
@@ -3064,7 +3000,7 @@ ImmersedFEMGeneralized<dim>::calculate_error () const
 //Calculation and output of tip displacement of the flag and lift-drag on the
 // cylinder+flag in the Turek-Hron FSI benchmark test
 template <int dim>
-void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
+void IFEM<dim>::fsi_bm_postprocess()
 {
   //: Some geometric features of the benchmark test(s)
   const Point<dim> center_cyl (0.2, 0.2); //: Center of the cylinder
@@ -3994,7 +3930,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess()
 
 
 template <int dim>
-void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess2()
+void IFEM<dim>::fsi_bm_postprocess2()
 {
   //: Some geometric features of the benchmark test(s)
   const Point<dim> center_cyl (0.2, 0.2); //: Center of the cylinder
@@ -4344,7 +4280,7 @@ void ImmersedFEMGeneralized<dim>::fsi_bm_postprocess2()
 
 template <int dim>
 template <class Archive>
-void ImmersedFEMGeneralized<dim>::serialize(Archive &ar, const unsigned int version)
+void IFEM<dim>::serialize(Archive &ar, const unsigned int version)
 {
   ar &current_time;
   ar &dt;
@@ -4353,7 +4289,7 @@ void ImmersedFEMGeneralized<dim>::serialize(Archive &ar, const unsigned int vers
 
 
 template <int dim>
-void ImmersedFEMGeneralized<dim>::restart_computations()
+void IFEM<dim>::restart_computations()
 {
   // Load the details concerning the temporal integration.
   //Currently we are reading in: current_time, timestep and dt
@@ -4393,7 +4329,7 @@ void ImmersedFEMGeneralized<dim>::restart_computations()
 }
 
 template <int dim>
-void ImmersedFEMGeneralized<dim>::save_for_restart()
+void IFEM<dim>::save_for_restart()
 {
   // Assumption is that if the initial time is 0 then this the first time that this
   // computation
@@ -4453,7 +4389,7 @@ void ImmersedFEMGeneralized<dim>::save_for_restart()
 
 template <int dim>
 template <class Type>
-void ImmersedFEMGeneralized<dim>::set_to_zero (Type &v) const
+void IFEM<dim>::set_to_zero (Type &v) const
 {
   v = 0;
 }
@@ -4462,7 +4398,7 @@ void ImmersedFEMGeneralized<dim>::set_to_zero (Type &v) const
 // generic type.
 template <int dim>
 template <class Type>
-void ImmersedFEMGeneralized<dim>::set_to_zero (vector<Type> &v) const
+void IFEM<dim>::set_to_zero (vector<Type> &v) const
 {
   for (unsigned int i = 0; i < v.size(); ++i) set_to_zero(v[i]);
 }
@@ -4471,7 +4407,7 @@ void ImmersedFEMGeneralized<dim>::set_to_zero (vector<Type> &v) const
 // generic type.
 template <int dim>
 template <class Type>
-void ImmersedFEMGeneralized<dim>::set_to_zero (Table<2, Type> &v) const
+void IFEM<dim>::set_to_zero (Table<2, Type> &v) const
 {
   for (unsigned int i=0; i<v.size()[0]; ++i)
     for (unsigned int j=0; j<v.size()[1]; ++j) set_to_zero(v(i,j));
@@ -4479,13 +4415,13 @@ void ImmersedFEMGeneralized<dim>::set_to_zero (Table<2, Type> &v) const
 
 // Determination of the norm of a vector.
 template <int dim>
-double ImmersedFEMGeneralized<dim>::norm(const vector<double> &v)
+double IFEM<dim>::norm(const vector<double> &v)
 {
   double norm = 0;
   for ( unsigned int i = 0; i < v.size(); ++i) norm += v[i]*v[i];
   return norm = sqrt(norm);
 }
 
-template class ImmersedFEMGeneralized<2>;
-template class ImmersedFEMGeneralized<3>;
+template class IFEM<2>;
+template class IFEM<3>;
 

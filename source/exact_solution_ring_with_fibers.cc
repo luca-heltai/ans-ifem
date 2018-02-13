@@ -17,7 +17,7 @@
 
 template<int dim>
 ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
-  IFEMParametersGeneralized<dim> &prm
+  IFEMParameters<dim> &prm
 )
   :
   Function<dim>(dim+1),

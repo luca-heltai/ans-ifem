@@ -73,7 +73,7 @@
 #include <typeinfo>
 
 // Our own include files
-#include "ifem_parameters_generalized.h"
+#include "ifem_parameters.h"
 #include "exact_solution_ring_with_fibers.h"
 
 using namespace std;
@@ -91,7 +91,7 @@ public:
   // initialized by assigning the simulation parameters, which are
   // elements of objects of type IFEMParametersGeneralized.
 
-  PostProcessor(IFEMParametersGeneralized<dim> &par);
+  PostProcessor(IFEMParameters<dim> &par);
   ~PostProcessor();
 
   void run ();
@@ -101,7 +101,7 @@ private:
 
   // The parameters of the problem.
 
-  IFEMParametersGeneralized<dim> &par;
+  IFEMParameters<dim> &par;
 
 
   // Vector of boundary indicators. The type of this vector matches the

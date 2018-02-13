@@ -13,8 +13,8 @@
 // http://www.dealii.org/ -> License for the text and further
 // information on this license.
 
-#ifndef ifem_parameters_generalized_h
-#define ifem_parameters_generalized_h
+#ifndef ifem_parameters_h
+#define ifem_parameters_h
 
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/parsed_function.h>
@@ -31,12 +31,12 @@ using namespace std;
 //! in <code>deal.II</code>.
 
 template <int dim>
-class IFEMParametersGeneralized : public ParameterHandler
+class IFEMParameters : public ParameterHandler
 {
 public:
-  IFEMParametersGeneralized(int argc, char **argv);
+  IFEMParameters(int argc, char **argv);
 
-  ~IFEMParametersGeneralized();
+  ~IFEMParameters();
 
 // Polynomial degree of the interpolation functions for the velocity
 // of the fluid and the displacement of the solid. This parameters
@@ -317,10 +317,6 @@ public:
 // Variable to store whether Dirichlet boundary conditions will be imposed on
 // the solid for the benchmark cases
   bool use_dbc_solid;
-
-// Variable to store whether we are running simulations involving the brain mesh.
-
-  bool brain_mesh;
 
 // Variable to store whether this is a restart or not.
   bool this_is_a_restart;
