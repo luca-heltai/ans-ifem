@@ -15,66 +15,58 @@
 
 #include "exact_solution_ring_with_fibers.h"
 
-template<int dim>
-ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers (
-  IFEMParameters<dim> &prm
-)
-  :
-  Function<dim>(dim+1),
-  par(prm)
+template <int dim>
+ExactSolutionRingWithFibers<dim>::ExactSolutionRingWithFibers(
+  IFEMParameters<dim> &prm)
+  : Function<dim>(dim + 1)
+  , par(prm)
 {
-  par.enter_subsection (
-    "Equilibrium Solution of Ring with Circumferential Fibers"
-  );
-  R = par.get_double ("Inner radius of the ring");
-  w = par.get_double ("Width of the ring");
-  l = par.get_double ("Any edge length of the (square) control volume");
-  center[0] = par.get_double ("x-coordinate of the center of the ring");
-  center[1] = par.get_double ("y-coordinate of the center of the ring");
-  par.leave_subsection ();
+  par.enter_subsection(
+    "Equilibrium Solution of Ring with Circumferential Fibers");
+  R         = par.get_double("Inner radius of the ring");
+  w         = par.get_double("Width of the ring");
+  l         = par.get_double("Any edge length of the (square) control volume");
+  center[0] = par.get_double("x-coordinate of the center of the ring");
+  center[1] = par.get_double("y-coordinate of the center of the ring");
+  par.leave_subsection();
 }
 
 // It provides the Lagrange multiplier (pressure)
 // distribution in the control volume and in the ring at equilibrium.
 
-template<int dim>
+template <int dim>
 void
-ExactSolutionRingWithFibers<dim>::vector_value
-(
-  const Point <dim> &p,
-  Vector <double> &values
-) const
+ExactSolutionRingWithFibers<dim>::vector_value(const Point<dim> &p,
+                                               Vector<double>   &values) const
 {
-  double r = p.distance (center);
+  double r = p.distance(center);
 
   values = 0.0;
 
-  double p0 = -numbers::PI*par.mu/(2*l*l)*w*(2*R+w);
+  double p0 = -numbers::PI * par.mu / (2 * l * l) * w * (2 * R + w);
 
-  if (r >= (R+w))
+  if (r >= (R + w))
     values(dim) = p0;
   else if (r >= R)
-    values(dim) = p0 + par.mu*log((R + w)/r);
+    values(dim) = p0 + par.mu * log((R + w) / r);
   else
-    values(dim) = p0 + par.mu*log(1.0 + w/R);
+    values(dim) = p0 + par.mu * log(1.0 + w / R);
 }
 
 // It provides the Lagrange multiplier (pressure) distribution in the
 // control volume and in the ring at equilibrium.
 
-template<int dim>
+template <int dim>
 void
-ExactSolutionRingWithFibers<dim>::vector_value_list
-(
-  const vector< Point<dim> > &points,
-  vector <Vector <double> > &values
-) const
+ExactSolutionRingWithFibers<dim>::vector_value_list(
+  const vector<Point<dim>> &points,
+  vector<Vector<double>>   &values) const
 {
-  Assert (points.size() == values.size(),
-          ExcDimensionMismatch(points.size(), values.size()));
+  Assert(points.size() == values.size(),
+         ExcDimensionMismatch(points.size(), values.size()));
 
   for (unsigned int i = 0; i < values.size(); ++i)
-    vector_value (points[i], values[i]);
+    vector_value(points[i], values[i]);
 }
 
 template class ExactSolutionRingWithFibers<2>;

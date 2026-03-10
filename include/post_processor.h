@@ -16,65 +16,63 @@
 #ifndef post_processor_h
 #define post_processor_h
 
-#include <deal.II/grid/tria.h>
-
-#include <deal.II/base/point.h>
-#include <deal.II/base/function.h>
-#include <deal.II/base/tensor.h>
-#include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/utilities.h>
 #include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/function.h>
+#include <deal.II/base/point.h>
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/tensor.h>
+#include <deal.II/base/utilities.h>
 
-#include <deal.II/lac/vector.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/precondition.h>
-#include <deal.II/lac/sparse_direct.h>
-#include <deal.II/lac/vector_view.h>
+#include <deal.II/dofs/dof_accessor.h>
+#include <deal.II/dofs/dof_handler.h>
+#include <deal.II/dofs/dof_renumbering.h>
+#include <deal.II/dofs/dof_tools.h>
 
-#include <deal.II/grid/tria.h>
+#include <deal.II/fe/fe_dgp.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_system.h>
+#include <deal.II/fe/fe_tools.h>
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/fe/mapping_q_eulerian.h>
+
 #include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_refinement.h>
-#include <deal.II/grid/tria_accessor.h>
-#include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/grid/grid_in.h>
+#include <deal.II/grid/grid_refinement.h>
 #include <deal.II/grid/grid_tools.h>
 #include <deal.II/grid/manifold.h>
 #include <deal.II/grid/manifold_lib.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/tria_iterator.h>
 
-#include <deal.II/dofs/dof_handler.h>
-#include <deal.II/dofs/dof_accessor.h>
-#include <deal.II/dofs/dof_tools.h>
-#include <deal.II/dofs/dof_renumbering.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/sparse_direct.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/vector_view.h>
 
-#include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_dgp.h>
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/fe/fe_tools.h>
-#include <deal.II/fe/fe_system.h>
-#include <deal.II/fe/mapping_q_eulerian.h>
-
-#include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/fe_field_function.h>
 #include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/fe_field_function.h>
+#include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/vector_tools.h>
 
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 // Elements of the C++ standard library
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <set>
-#include <map>
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
 #include <typeinfo>
+#include <vector>
 
 // Our own include files
-#include "ifem_parameters.h"
 #include "exact_solution_ring_with_fibers.h"
+#include "ifem_parameters.h"
 
 using namespace std;
 
@@ -85,8 +83,6 @@ template <int dim>
 class PostProcessor
 {
 public:
-
-
   // No default constructor is defined. Simulation objects must be
   // initialized by assigning the simulation parameters, which are
   // elements of objects of type IFEMParametersGeneralized.
@@ -94,11 +90,10 @@ public:
   PostProcessor(IFEMParameters<dim> &par);
   ~PostProcessor();
 
-  void run ();
+  void
+  run();
 
 private:
-
-
   // The parameters of the problem.
 
   IFEMParameters<dim> &par;
@@ -241,15 +236,15 @@ private:
 
 
   // Storage for the elasticity operator of the immersed domain.
-  Vector <double> A_gamma;
+  Vector<double> A_gamma;
 
 
   // M_gamma3_inv * A_gamma.
-  Vector <double> M_gamma3_inv_A_gamma;
+  Vector<double> M_gamma3_inv_A_gamma;
 
 
-  //Vector to store the volume flux due to the point-source
-  Vector <double> volume_flux;
+  // Vector to store the volume flux due to the point-source
+  Vector<double> volume_flux;
 
 
   // Area of the control volume.
@@ -266,11 +261,11 @@ private:
   ofstream fsi_bm_out_file;
 
 
-  //Variable to store the current_time;
+  // Variable to store the current_time;
   double current_time;
 
 
-  //Variable to store the time step
+  // Variable to store the time step
   unsigned int time_step;
 
 
@@ -278,40 +273,43 @@ private:
   double dt;
 
 
-  //The following be necessary for serialization purposes
+  // The following be necessary for serialization purposes
   friend class boost::serialization::access;
 
 
   // ---------------------
   // Function declarations
   // ---------------------
-  void create_triangulation_and_dofs ();
+  void
+  create_triangulation_and_dofs();
 
-  unsigned int n_dofs() const
+  unsigned int
+  n_dofs() const
   {
     return n_total_dofs;
   };
 
-  void post_process (
-    const double t,
-    const unsigned int step_number,
-    const double dt
-  );
+  void
+  post_process(const double t, const unsigned int step_number, const double dt);
 
-  template<class Type>
-  inline void set_to_zero (Type &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(Type &v) const;
 
-  template<class Type>
-  inline void set_to_zero (Table<2,Type> &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(Table<2, Type> &v) const;
 
-  template<class Type>
-  inline void set_to_zero(vector<Type> &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(vector<Type> &v) const;
 
-  double norm(const vector<double> &v);
+  double
+  norm(const vector<double> &v);
 
-  void get_inverse_transpose
-  (const vector < Tensor <2, dim> > &F,
-   vector < Tensor <2, dim> > &local_invFT) const;
+  void
+  get_inverse_transpose(const vector<Tensor<2, dim>> &F,
+                        vector<Tensor<2, dim>>       &local_invFT) const;
 };
 
 #endif

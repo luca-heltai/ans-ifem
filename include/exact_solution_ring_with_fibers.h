@@ -15,9 +15,11 @@
 #ifndef exact_solution_ring_with_fibers_h
 #define exact_solution_ring_with_fibers_h
 
-#include "ifem_parameters.h"
 #include <deal.II/base/point.h>
+
 #include <deal.II/lac/vector.h>
+
+#include "ifem_parameters.h"
 
 using namespace dealii;
 
@@ -35,42 +37,40 @@ using namespace dealii;
 //! learned this expression from our colleague Boyce E. Griffith,
 //! currently at the Leon H. Charney Division of Cardiology, Department
 //! of Medicine, NYU School of Medicine, New York University.
-template<int dim>
-class ExactSolutionRingWithFibers :
-  public Function<dim>
+template <int dim>
+class ExactSolutionRingWithFibers : public Function<dim>
 {
 public:
+  //! No default constructor is defined. Simulation objects must be
+  //! initialized by assigning the simulation parameters, which are
+  //! elements of objects of type <code>IFEMParameters</code>.
 
-//! No default constructor is defined. Simulation objects must be
-//! initialized by assigning the simulation parameters, which are
-//! elements of objects of type <code>IFEMParameters</code>.
+  ExactSolutionRingWithFibers(IFEMParameters<dim> &par);
 
-  ExactSolutionRingWithFibers (IFEMParameters<dim> &par);
+  void
+  vector_value(const Point<dim> &p, Vector<double> &values) const;
 
-  void vector_value (const Point <dim> &p,
-                     Vector <double> &values) const;
+  void
+  vector_value_list(const vector<Point<dim>> &points,
+                    vector<Vector<double>>   &values) const;
 
-  void vector_value_list(const vector< Point<dim> > &points,
-                         vector <Vector <double> > &values ) const;
-
-//! Inner radius of the ring.
+  //! Inner radius of the ring.
 
   double R;
 
-//! Width of the ring.
+  //! Width of the ring.
 
   double w;
 
-//! Edge length of the square control volume.
+  //! Edge length of the square control volume.
 
   double l;
 
-//! Center of the ring.
+  //! Center of the ring.
 
   Point<dim> center;
 
 private:
-
   IFEMParameters<dim> &par;
 };
 

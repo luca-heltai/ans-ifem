@@ -16,71 +16,70 @@
 #ifndef immersed_fem_h
 #define immersed_fem_h
 
-#include <deal.II/grid/tria.h>
-
-#include <deal.II/base/point.h>
-#include <deal.II/base/function.h>
-#include <deal.II/base/tensor.h>
-#include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/utilities.h>
 #include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/function.h>
 #include <deal.II/base/patterns.h>
+#include <deal.II/base/point.h>
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/tensor.h>
+#include <deal.II/base/utilities.h>
 
-#include <deal.II/lac/vector.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/precondition.h>
-#include <deal.II/lac/sparse_direct.h>
-#include <deal.II/lac/vector_view.h>
+#include <deal.II/dofs/dof_accessor.h>
+#include <deal.II/dofs/dof_handler.h>
+#include <deal.II/dofs/dof_renumbering.h>
+#include <deal.II/dofs/dof_tools.h>
 
-#include <deal.II/grid/tria.h>
+#include <deal.II/fe/fe_dgp.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_system.h>
+#include <deal.II/fe/fe_tools.h>
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/fe/mapping_q_eulerian.h>
+
 #include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_refinement.h>
-#include <deal.II/grid/tria_accessor.h>
-#include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/grid/grid_in.h>
+#include <deal.II/grid/grid_refinement.h>
 #include <deal.II/grid/grid_tools.h>
 #include <deal.II/grid/manifold.h>
 #include <deal.II/grid/manifold_lib.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/tria_iterator.h>
 
-#include <deal.II/dofs/dof_handler.h>
-#include <deal.II/dofs/dof_accessor.h>
-#include <deal.II/dofs/dof_tools.h>
-#include <deal.II/dofs/dof_renumbering.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/sparse_direct.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/vector_view.h>
 
-#include <deal.II/fe/fe_q.h>
-#include <deal.II/fe/fe_dgp.h>
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/fe/fe_tools.h>
-#include <deal.II/fe/fe_system.h>
-#include <deal.II/fe/mapping_q_eulerian.h>
-
-#include <deal.II/numerics/vector_tools.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/fe_field_function.h>
 #include <deal.II/numerics/data_out.h>
+#include <deal.II/numerics/fe_field_function.h>
+#include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/vector_tools.h>
 
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 // Elements of the C++ standard library
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <set>
-#include <map>
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
 #include <typeinfo>
+#include <vector>
 
 // Our own include files
-#include "ifem_parameters.h"
 #include "exact_solution_ring_with_fibers.h"
+#include "ifem_parameters.h"
 
 using namespace std;
 
 template <typename T>
-std::string to_string(const T &object)
+std::string
+to_string(const T &object)
 {
   return Patterns::Tools::Convert<T>::to_string(object);
 }
@@ -92,8 +91,6 @@ template <int dim>
 class IFEM
 {
 public:
-
-
   // No default constructor is defined. Simulation objects must be
   // initialized by assigning the simulation parameters, which are
   // elements of objects of type IFEMParametersGeneralized.
@@ -101,11 +98,10 @@ public:
   IFEM(IFEMParameters<dim> &par);
   ~IFEM();
 
-  void run ();
+  void
+  run();
 
 private:
-
-
   // The parameters of the problem.
 
   IFEMParameters<dim> &par;
@@ -172,7 +168,7 @@ private:
   // <code>MappingQEulerian</code> object that will support such a
   // description.
 
-  std::unique_ptr<MappingQEulerian<dim, Vector<double>, dim> > mapping;
+  std::unique_ptr<MappingQEulerian<dim, Vector<double>, dim>> mapping;
 
 
   // The quadrature object for the control volume.
@@ -282,7 +278,7 @@ private:
 
 
   // Storage for the elasticity operator of the immersed domain.
-  Vector <double> A_gamma;
+  Vector<double> A_gamma;
 
 
   // Mass matrix of the immersed domain.
@@ -294,11 +290,11 @@ private:
 
 
   // M_gamma3_inv * A_gamma.
-  Vector <double> M_gamma3_inv_A_gamma;
+  Vector<double> M_gamma3_inv_A_gamma;
 
 
-  //Vector to store the volume flux due to the point-source
-  Vector <double> volume_flux;
+  // Vector to store the volume flux due to the point-source
+  Vector<double> volume_flux;
 
 
   // Area of the control volume.
@@ -315,11 +311,11 @@ private:
   ofstream fsi_bm_out_file;
 
 
-  //Variable to store the current_time;
+  // Variable to store the current_time;
   double current_time;
 
 
-  //Variable to store the time step
+  // Variable to store the time step
   unsigned int time_step;
 
 
@@ -327,136 +323,142 @@ private:
   double dt;
 
 
-  //The following be necessary for serialization purposes
+  // The following be necessary for serialization purposes
   friend class boost::serialization::access;
 
 
   // ---------------------
   // Function declarations
   // ---------------------
-  void create_triangulation_and_dofs ();
+  void
+  create_triangulation_and_dofs();
 
-  void apply_constraints (vector<double> &local_res,
-                          FullMatrix<double> &local_jacobian,
-                          const Vector<double> &local_up,
-                          const vector<unsigned int> &dofs,
-                          unsigned int offset);
+  void
+  apply_constraints(vector<double>             &local_res,
+                    FullMatrix<double>         &local_jacobian,
+                    const Vector<double>       &local_up,
+                    const vector<unsigned int> &dofs,
+                    unsigned int                offset);
 
-  void compute_current_bc (const double time);
+  void
+  compute_current_bc(const double time);
 
-  void apply_current_bc (
-    BlockVector<double> &vec,
-    const double time);
+  void
+  apply_current_bc(BlockVector<double> &vec, const double time);
 
-  void assemble_sparsity (Mapping<dim, dim> &mapping);
+  void
+  assemble_sparsity(Mapping<dim, dim> &mapping);
 
-  void  get_area_and_first_pressure_dof ();
+  void
+  get_area_and_first_pressure_dof();
 
-  void residual_and_or_Jacobian (
-    BlockVector<double> &residual,
-    BlockSparseMatrix<double> &Jacobian,
-    const BlockVector<double> &xit,
-    const BlockVector<double> &xi,
-    const double alpha,
-    const double t
-  );
+  void
+  residual_and_or_Jacobian(BlockVector<double>       &residual,
+                           BlockSparseMatrix<double> &Jacobian,
+                           const BlockVector<double> &xit,
+                           const BlockVector<double> &xi,
+                           const double               alpha,
+                           const double               t);
 
-  void distribute_residual (
-    Vector<double> &residual,
-    const vector<double> &local_res,
-    const vector<unsigned int> &dofs_1,
-    const unsigned int offset_1
-  );
+  void
+  distribute_residual(Vector<double>             &residual,
+                      const vector<double>       &local_res,
+                      const vector<unsigned int> &dofs_1,
+                      const unsigned int          offset_1);
 
-  void distribute_jacobian (
-    SparseMatrix<double> &Jacobian,
-    const FullMatrix<double> &local_Jac,
-    const vector<unsigned int> &dofs_1,
-    const vector<unsigned int> &dofs_2,
-    const unsigned int offset_1,
-    const unsigned int offset_2
-  );
+  void
+  distribute_jacobian(SparseMatrix<double>       &Jacobian,
+                      const FullMatrix<double>   &local_Jac,
+                      const vector<unsigned int> &dofs_1,
+                      const vector<unsigned int> &dofs_2,
+                      const unsigned int          offset_1,
+                      const unsigned int          offset_2);
 
-  void distribute_constraint_on_pressure (
-    Vector<double> &residual,
-    const double average_pressure
-  );
+  void
+  distribute_constraint_on_pressure(Vector<double> &residual,
+                                    const double    average_pressure);
 
-  void distribute_constraint_on_pressure (
-    SparseMatrix<double> &jacobian,
-    const vector<double> &pressure_coefficient,
-    const vector<unsigned int> &dofs,
-    const unsigned int offset
-  );
+  void
+  distribute_constraint_on_pressure(SparseMatrix<double> &jacobian,
+                                    const vector<double> &pressure_coefficient,
+                                    const vector<unsigned int> &dofs,
+                                    const unsigned int          offset);
 
-  void localize (
-    Vector<double> &local_M_gamma3_inv_A_gamma,
-    const Vector<double> &M_gamma3_inv_A_gamma,
-    const vector<unsigned int> &dofs
-  );
+  void
+  localize(Vector<double>             &local_M_gamma3_inv_A_gamma,
+           const Vector<double>       &M_gamma3_inv_A_gamma,
+           const vector<unsigned int> &dofs);
 
-  void get_Agamma_values (
-    const FEValues<dim,dim> &fe_v_s,
-    const vector< unsigned int > &dofs,
-    const Vector<double> &xi,
-    Vector<double> &local_A_gamma
-  );
+  void
+  get_Agamma_values(const FEValues<dim, dim>   &fe_v_s,
+                    const vector<unsigned int> &dofs,
+                    const Vector<double>       &xi,
+                    Vector<double>             &local_A_gamma);
 
   template <class FEVal>
-  void get_Pe_F_and_DPeFT_dxi_values (
-    const FEVal &fe_v_s,
-    const vector< unsigned int > &dofs,
-    const Vector<double> &xi,
-    const bool update_jacobian,
-    vector<Tensor<2,dim,double> > &Pe,
-    vector<Tensor<2,dim,double> > &F,
-    vector< vector<Tensor<2,dim,double> > > &DPe_dxi
-  );
+  void
+  get_Pe_F_and_DPeFT_dxi_values(
+    const FEVal                            &fe_v_s,
+    const vector<unsigned int>             &dofs,
+    const Vector<double>                   &xi,
+    const bool                              update_jacobian,
+    vector<Tensor<2, dim, double>>         &Pe,
+    vector<Tensor<2, dim, double>>         &F,
+    vector<vector<Tensor<2, dim, double>>> &DPe_dxi);
 
-  void get_inverse_transpose (
-    const vector < Tensor <2, dim> > &F,
-    vector < Tensor <2, dim> > &local_invFT
-  );
+  void
+  get_inverse_transpose(const vector<Tensor<2, dim>> &F,
+                        vector<Tensor<2, dim>>       &local_invFT);
 
-  void get_volume_flux_vector (const double t);
+  void
+  get_volume_flux_vector(const double t);
 
-  void calculate_error () const;
+  void
+  calculate_error() const;
 
-  unsigned int n_dofs() const
+  unsigned int
+  n_dofs() const
   {
     return n_total_dofs;
   };
 
-  void output_step (
-    const double t,
-    const BlockVector<double> &solution,
-    const unsigned int step_number,
-    const double h,
-    const bool _output = false
-  );
+  void
+  output_step(const double               t,
+              const BlockVector<double> &solution,
+              const unsigned int         step_number,
+              const double               h,
+              const bool                 _output = false);
 
-  template<class Type>
-  inline void set_to_zero (Type &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(Type &v) const;
 
-  template<class Type>
-  inline void set_to_zero (Table<2,Type> &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(Table<2, Type> &v) const;
 
-  template<class Type>
-  inline void set_to_zero(vector<Type> &v) const;
+  template <class Type>
+  inline void
+  set_to_zero(vector<Type> &v) const;
 
-  double norm(const vector<double> &v);
+  double
+  norm(const vector<double> &v);
 
-  void fsi_bm_postprocess();
+  void
+  fsi_bm_postprocess();
 
-  void fsi_bm_postprocess2();
+  void
+  fsi_bm_postprocess2();
 
   template <class Archive>
-  void serialize(Archive &ar, const unsigned int version);
+  void
+  serialize(Archive &ar, const unsigned int version);
 
-  void restart_computations();
+  void
+  restart_computations();
 
-  void save_for_restart();
-
+  void
+  save_for_restart();
 };
 
 #endif
