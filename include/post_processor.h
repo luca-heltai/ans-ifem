@@ -72,8 +72,6 @@
 #include "exact_solution_ring_with_fibers.h"
 #include "ifem_parameters.h"
 
-using namespace std;
-
 //! This class defines simulations objects. The only method in the public
 //! interface is <code>run()</code>, which is invoked to carry out the
 //! simulation.
@@ -101,7 +99,7 @@ private:
   // return type of the function <code>Triangulation< dim, spacedim
   // >::get_boundary_indicator()</code>.
 
-  vector<types::boundary_id> boundary_indicators;
+  std::vector<types::boundary_id> boundary_indicators;
 
 
   // Triangulation over the control volume (fluid domain).  Following
@@ -252,11 +250,11 @@ private:
   // File stream that is used to output a file containing information
   // about the fluid flux, area and the centroid of the immersed domain
   // over time.
-  ofstream global_info_file;
+  std::ofstream global_info_file;
 
   // File stream that is used to output a file containing information
   // about the tip displacement of the flag in the Turek-Hron FSI Benchmark
-  ofstream fsi_bm_out_file;
+  std::ofstream fsi_bm_out_file;
 
 
   // Variable to store the current_time;
@@ -300,14 +298,14 @@ private:
 
   template <class Type>
   inline void
-  set_to_zero(vector<Type> &v) const;
+  set_to_zero(std::vector<Type> &v) const;
 
   double
-  norm(const vector<double> &v);
+  norm(const std::vector<double> &v);
 
   void
-  get_inverse_transpose(const vector<Tensor<2, dim>> &F,
-                        vector<Tensor<2, dim>>       &local_invFT) const;
+  get_inverse_transpose(const std::vector<Tensor<2, dim>> &F,
+                        std::vector<Tensor<2, dim>>       &local_invFT) const;
 };
 
 #endif

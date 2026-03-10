@@ -429,8 +429,6 @@ align="bottom">Disk entrained in a lid-driven cavity flow.</caption> <tr>
 #include "ifem_parameters.h"
 #include "post_processor.h"
 
-using namespace std;
-
 //! The main function: essentially the same as in the
 //! <code>deal.II</code> examples.
 int
@@ -442,28 +440,28 @@ main(int argc, char **argv)
       PostProcessor<3>  test(par);
       test.run();
     }
-  catch (exception &exc)
+  catch (std::exception &exc)
     {
-      cerr << endl
-           << endl
-           << "----------------------------------------------------" << endl;
-      cerr << "Exception on processing: " << endl
-           << exc.what() << endl
-           << "Aborting!" << endl
-           << "----------------------------------------------------" << endl;
+      std::cerr << std::endl
+                << std::endl
+                << "----------------------------------------------------" << std::endl;
+      std::cerr << "Exception on processing: " << std::endl
+                << exc.what() << std::endl
+                << "Aborting!" << std::endl
+                << "----------------------------------------------------" << std::endl;
       return 1;
     }
   catch (...)
     {
-      cerr << endl
-           << endl
-           << "----------------------------------------------------" << endl;
-      cerr << "Unknown exception!" << endl
-           << "Aborting!" << endl
-           << "----------------------------------------------------" << endl;
+      std::cerr << std::endl
+                << std::endl
+                << "----------------------------------------------------" << std::endl;
+      std::cerr << "Unknown exception!" << std::endl
+                << "Aborting!" << std::endl
+                << "----------------------------------------------------" << std::endl;
       return 1;
     }
-  cout << "----------------------------------------------------" << endl
-       << "Apparently everything went fine!" << endl;
+  std::cout << "----------------------------------------------------" << std::endl
+            << "Apparently everything went fine!" << std::endl;
   return 0;
 }

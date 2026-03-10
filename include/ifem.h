@@ -74,8 +74,6 @@
 #include "exact_solution_ring_with_fibers.h"
 #include "ifem_parameters.h"
 
-using namespace std;
-
 template <typename T>
 std::string
 to_string(const T &object)
@@ -110,7 +108,7 @@ private:
   // return type of the function <code>Triangulation< dim, spacedim
   // >::get_boundary_indicator()</code>.
 
-  vector<types::boundary_id> boundary_ids;
+  std::vector<types::boundary_id> boundary_ids;
 
 
   // Triangulation over the control volume (fluid domain).  Following
@@ -303,11 +301,11 @@ private:
   // File stream that is used to output a file containing information
   // about the fluid flux, area and the centroid of the immersed domain
   // over time.
-  ofstream global_info_file;
+  std::ofstream global_info_file;
 
   // File stream that is used to output a file containing information
   // about the tip displacement of the flag in the Turek-Hron FSI Benchmark
-  ofstream fsi_bm_out_file;
+  std::ofstream fsi_bm_out_file;
 
 
   // Variable to store the current_time;
@@ -333,10 +331,10 @@ private:
   create_triangulation_and_dofs();
 
   void
-  apply_constraints(vector<double>             &local_res,
+  apply_constraints(std::vector<double>        &local_res,
                     FullMatrix<double>         &local_jacobian,
                     const Vector<double>       &local_up,
-                    const vector<unsigned int> &dofs,
+                    const std::vector<unsigned int> &dofs,
                     unsigned int                offset);
 
   void
@@ -361,15 +359,15 @@ private:
 
   void
   distribute_residual(Vector<double>             &residual,
-                      const vector<double>       &local_res,
-                      const vector<unsigned int> &dofs_1,
+                      const std::vector<double> &local_res,
+                      const std::vector<unsigned int> &dofs_1,
                       const unsigned int          offset_1);
 
   void
   distribute_jacobian(SparseMatrix<double>       &Jacobian,
                       const FullMatrix<double>   &local_Jac,
-                      const vector<unsigned int> &dofs_1,
-                      const vector<unsigned int> &dofs_2,
+                      const std::vector<unsigned int> &dofs_1,
+                      const std::vector<unsigned int> &dofs_2,
                       const unsigned int          offset_1,
                       const unsigned int          offset_2);
 
@@ -379,18 +377,18 @@ private:
 
   void
   distribute_constraint_on_pressure(SparseMatrix<double> &jacobian,
-                                    const vector<double> &pressure_coefficient,
-                                    const vector<unsigned int> &dofs,
+                                    const std::vector<double> &pressure_coefficient,
+                                    const std::vector<unsigned int> &dofs,
                                     const unsigned int          offset);
 
   void
   localize(Vector<double>             &local_M_gamma3_inv_A_gamma,
            const Vector<double>       &M_gamma3_inv_A_gamma,
-           const vector<unsigned int> &dofs);
+           const std::vector<unsigned int> &dofs);
 
   void
   get_Agamma_values(const FEValues<dim, dim>   &fe_v_s,
-                    const vector<unsigned int> &dofs,
+                    const std::vector<unsigned int> &dofs,
                     const Vector<double>       &xi,
                     Vector<double>             &local_A_gamma);
 
@@ -398,16 +396,16 @@ private:
   void
   get_Pe_F_and_DPeFT_dxi_values(
     const FEVal                            &fe_v_s,
-    const vector<unsigned int>             &dofs,
+    const std::vector<unsigned int>        &dofs,
     const Vector<double>                   &xi,
     const bool                              update_jacobian,
-    vector<Tensor<2, dim, double>>         &Pe,
-    vector<Tensor<2, dim, double>>         &F,
-    vector<vector<Tensor<2, dim, double>>> &DPe_dxi);
+    std::vector<Tensor<2, dim, double>>         &Pe,
+    std::vector<Tensor<2, dim, double>>         &F,
+    std::vector<std::vector<Tensor<2, dim, double>>> &DPe_dxi);
 
   void
-  get_inverse_transpose(const vector<Tensor<2, dim>> &F,
-                        vector<Tensor<2, dim>>       &local_invFT);
+  get_inverse_transpose(const std::vector<Tensor<2, dim>> &F,
+                        std::vector<Tensor<2, dim>>       &local_invFT);
 
   void
   get_volume_flux_vector(const double t);
@@ -438,10 +436,10 @@ private:
 
   template <class Type>
   inline void
-  set_to_zero(vector<Type> &v) const;
+  set_to_zero(std::vector<Type> &v) const;
 
   double
-  norm(const vector<double> &v);
+  norm(const std::vector<double> &v);
 
   void
   fsi_bm_postprocess();

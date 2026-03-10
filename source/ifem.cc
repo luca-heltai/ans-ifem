@@ -20,11 +20,11 @@ namespace boost
 
 
 void
-move_file(const string &old_name, const string &new_name)
+move_file(const std::string &old_name, const std::string &new_name)
 {
   const int error = system(("mv " + old_name + " " + new_name).c_str());
   AssertThrow(error == 0,
-              ExcMessage(string("Can't move files: ") + old_name + " -> " +
+              ExcMessage(std::string("Can't move files: ") + old_name + " -> " +
                          new_name));
 }
 
@@ -49,11 +49,11 @@ IFEM<dim>::IFEM(IFEMParameters<dim> &par)
   , quad_f(par.degree + 2)
 {
   if (par.degree <= 1)
-    cout << " WARNING: The chosen pair of finite element spaces is not  stable."
-         << endl
-         << " The obtained results will be nonsense." << endl;
+    std::cout << " WARNING: The chosen pair of finite element spaces is not  stable."
+         << std::endl
+         << " The obtained results will be nonsense." << std::endl;
 
-  if (Utilities::match_at_string_start(par.fe_p_name, string("FE_DGP")))
+  if (Utilities::match_at_string_start(par.fe_p_name, std::string("FE_DGP")))
     dgp_for_p = true;
   else
     dgp_for_p = false;
@@ -77,11 +77,11 @@ IFEM<dim>::IFEM(IFEMParameters<dim> &par)
   if (par.this_is_a_restart)
     {
       global_info_file.open((par.output_name + "_global.gpl").c_str(),
-                            ios::app);
+                            std::ios::app);
 
       if (par.fsi_bm)
         fsi_bm_out_file.open((par.output_name + "_fsi_bm.out").c_str(),
-                             ios::app);
+                             std::ios::app);
     }
   else
     {
@@ -131,7 +131,7 @@ void
 IFEM<dim>::apply_current_bc(BlockVector<double> &vec, const double t)
 {
   compute_current_bc(t);
-  map<types::global_dof_index, double>::iterator it =
+  std::map<types::global_dof_index, double>::iterator it =
                                                     par.boundary_values.begin(),
                                                  itend =
                                                    par.boundary_values.end();
@@ -175,7 +175,7 @@ IFEM<dim>::create_triangulation_and_dofs()
   grid_in_f.attach_triangulation(tria_f);
 
   {
-    ifstream file(par.fluid_mesh.c_str());
+    std::ifstream file(par.fluid_mesh.c_str());
     Assert(file, ExcFileNotOpen(par.fluid_mesh.c_str()));
 
 
@@ -192,7 +192,7 @@ IFEM<dim>::create_triangulation_and_dofs()
     GridIn<dim, dim> grid_in_s;
     grid_in_s.attach_triangulation(tria_s);
 
-    ifstream file(par.solid_mesh.c_str());
+    std::ifstream file(par.solid_mesh.c_str());
     Assert(file, ExcFileNotOpen(par.solid_mesh.c_str()));
 
     // A grid in ucd or msh format is expected.
@@ -203,25 +203,25 @@ IFEM<dim>::create_triangulation_and_dofs()
     else
       AssertThrow(false, ExcMessage("Input file not supported."));
   }
-  cout << "Number of fluid refines = " << par.ref_f << endl;
+  std::cout << "Number of fluid refines = " << par.ref_f << std::endl;
   tria_f.refine_global(par.ref_f);
-  cout << "Number of active fluid cells: " << tria_f.n_active_cells() << endl;
-  cout << "Minimal fluid cell diam = "
-       << GridTools::minimal_cell_diameter(tria_f) << endl;
-  cout << "Maximal fluid cell diam = "
-       << GridTools::maximal_cell_diameter(tria_f) << endl; // SR
-  cout << "Number of solid refines = " << par.ref_s << endl;
+  std::cout << "Number of active fluid cells: " << tria_f.n_active_cells() << std::endl;
+  std::cout << "Minimal fluid cell diam = "
+       << GridTools::minimal_cell_diameter(tria_f) << std::endl;
+  std::cout << "Maximal fluid cell diam = "
+       << GridTools::maximal_cell_diameter(tria_f) << std::endl; // SR
+  std::cout << "Number of solid refines = " << par.ref_s << std::endl;
   tria_s.refine_global(par.ref_s);
-  cout << "Number of active solid cells: " << tria_s.n_active_cells() << endl;
-  cout << "Minimal solid cell diam = "
-       << GridTools::minimal_cell_diameter(tria_s) << endl;
-  cout << "Maximal solid cell diam = "
-       << GridTools::maximal_cell_diameter(tria_s) << endl;
+  std::cout << "Number of active solid cells: " << tria_s.n_active_cells() << std::endl;
+  std::cout << "Minimal solid cell diam = "
+       << GridTools::minimal_cell_diameter(tria_s) << std::endl;
+  std::cout << "Maximal solid cell diam = "
+       << GridTools::maximal_cell_diameter(tria_s) << std::endl;
 
-  // Initialization of the boundary_ids vector.
+  // Initialization of the boundary_ids std::vector.
   boundary_ids = tria_f.get_boundary_ids();
 
-  cout << "Fluid boundary ids = " << to_string(boundary_ids) << endl;
+  std::cout << "Fluid boundary ids = " << to_string(boundary_ids) << std::endl;
 
 
   // Distribution of the degrees of freedom. Both for the solid
@@ -234,11 +234,11 @@ IFEM<dim>::create_triangulation_and_dofs()
   // Consistently with the fact that the various components of
   // the system are stored in a block matrix, now renumber
   // velocity and pressure component wise.
-  vector<unsigned int> block_component(dim + 1, 0);
+  std::vector<unsigned int> block_component(dim + 1, 0);
   block_component[dim] = 1;
   DoFRenumbering::component_wise(dh_f, block_component);
 
-  const vector<types::global_dof_index> dofs_per_block =
+  const std::vector<types::global_dof_index> dofs_per_block =
     DoFTools::count_dofs_per_fe_block(dh_f, block_component);
 
 
@@ -258,12 +258,12 @@ IFEM<dim>::create_triangulation_and_dofs()
   n_dofs_W     = dh_s.n_dofs();
   n_total_dofs = n_dofs_up + n_dofs_W;
 
-  cout << "dim (V_h) = " << n_dofs_u << endl
-       << "dim (Q_h) = " << n_dofs_p << endl
-       << "dim (Z_h) = " << dh_s.n_dofs() << endl
-       << "Total: " << n_total_dofs << endl;
+  std::cout << "dim (V_h) = " << n_dofs_u << std::endl
+       << "dim (Q_h) = " << n_dofs_p << std::endl
+       << "dim (Z_h) = " << dh_s.n_dofs() << std::endl
+       << "Total: " << n_total_dofs << std::endl;
 
-  vector<unsigned int> all_dofs(2);
+  std::vector<unsigned int> all_dofs(2);
   all_dofs[0] = n_dofs_up;
   all_dofs[1] = n_dofs_W;
 
@@ -462,7 +462,7 @@ IFEM<dim>::create_triangulation_and_dofs()
       M_gamma3_inv.initialize(M_gamma3);
     }
 
-  //: Determine the volume flux vector at the initial instant of time
+  //: Determine the volume flux std::vector at the initial instant of time
   if (par.n_pt_source)
     {
       volume_flux.reinit(n_dofs_up);
@@ -480,11 +480,11 @@ IFEM<dim>::assemble_sparsity(Mapping<dim, dim> &immersed_mapping)
 {
   FEFieldFunction<dim, Vector<double>> up_field(dh_f, tmp_vec_n_dofs_up);
 
-  vector<typename DoFHandler<dim>::active_cell_iterator> cells;
-  vector<vector<Point<dim>>>                             qpoints;
-  vector<vector<unsigned int>>                           maps;
-  vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
-  vector<unsigned int> dofs_s(fe_s.dofs_per_cell);
+  std::vector<typename DoFHandler<dim>::active_cell_iterator> cells;
+  std::vector<std::vector<Point<dim>>>                             qpoints;
+  std::vector<std::vector<unsigned int>>                           maps;
+  std::vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
+  std::vector<unsigned int> dofs_s(fe_s.dofs_per_cell);
 
   typename DoFHandler<dim, dim>::active_cell_iterator cell =
                                                         dh_s.begin_active(),
@@ -536,7 +536,7 @@ IFEM<dim>::get_area_and_first_pressure_dof()
 
   FEValues<dim, dim> fe_v(fe_f, quad_f, update_values | update_JxW_values);
 
-  vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
+  std::vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
 
 
   // Calculate the area of the control volume.
@@ -594,7 +594,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
         par.degree, dh_s, xi.block(1));
 
 
-  // In applying the boundary conditions, we set a scaling factor equal
+  // In applying the boundary conditions, we std::set a scaling factor equal
   // to the diameter of the smallest cell in the triangulation of the fluid .
   scaling = GridTools::minimal_cell_diameter(tria_f);
 
@@ -610,7 +610,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
     }
 
 
-  // Add the contribution of the source term to the residual vector
+  // Add the contribution of the source term to the residual std::vector
   if (par.n_pt_source)
     {
       get_volume_flux_vector(t);
@@ -636,8 +636,8 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
 
 
   // Storage for the local dofs in the fluid and in the solid.
-  vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
-  vector<unsigned int> dofs_s(fe_s.dofs_per_cell);
+  std::vector<unsigned int> dofs_f(fe_f.dofs_per_cell);
+  std::vector<unsigned int> dofs_s(fe_s.dofs_per_cell);
 
 
   // <code>FEValues</code> for the fluid.
@@ -652,10 +652,10 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   const unsigned int nqps = quad_s.size();
 
 
-  // The local residual vector: the largest possible size of this
-  // vector is <code>n_local_dofs</code>.
-  vector<double>         local_res(n_local_dofs);
-  vector<Vector<double>> local_force(nqpf, Vector<double>(dim + 1));
+  // The local residual std::vector: the largest possible size of this
+  // std::vector is <code>n_local_dofs</code>.
+  std::vector<double>         local_res(n_local_dofs);
+  std::vector<Vector<double>> local_force(nqpf, Vector<double>(dim + 1));
   FullMatrix<double>     local_jacobian;
   if (update_jacobian)
     local_jacobian.reinit(n_local_dofs, n_local_dofs);
@@ -665,9 +665,9 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   // $f(\xi', \xi, t) = 0$,
   // we need to manage the information in $\xi'$ as though it were
   // independent of the information in $\xi$. We do so by defining a
-  // vector of local degrees of freedom that has a length equal
+  // std::vector of local degrees of freedom that has a length equal
   // to twice the total number of local degrees of freedom.
-  // This information is stored in the vector <code>local_x</code>.
+  // This information is stored in the std::vector <code>local_x</code>.
   // <ul>
   // <li> The first <code>fe_f.dofs_per_cell</code> elements of
   //      <code>local_x</code> contain the elements of $\xi'$
@@ -683,12 +683,12 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   // <ul>
 
   // Definition of the local dependent variables for the fluid.
-  vector<Vector<double>>         local_upt(nqpf, Vector<double>(dim + 1));
-  vector<Vector<double>>         local_up(nqpf, Vector<double>(dim + 1));
-  vector<vector<Tensor<1, dim>>> local_grad_up(nqpf,
-                                               vector<Tensor<1, dim>>(dim + 1));
-  vector<vector<Tensor<1, dim>>> local_grad_upt;
-  vector<vector<Tensor<2, dim>>> local_hessian_up;
+  std::vector<Vector<double>>         local_upt(nqpf, Vector<double>(dim + 1));
+  std::vector<Vector<double>>         local_up(nqpf, Vector<double>(dim + 1));
+  std::vector<std::vector<Tensor<1, dim>>> local_grad_up(nqpf,
+                                               std::vector<Tensor<1, dim>>(dim + 1));
+  std::vector<std::vector<Tensor<1, dim>>> local_grad_upt;
+  std::vector<std::vector<Tensor<2, dim>>> local_hessian_up;
   unsigned int                   comp_i = 0, comp_j = 0;
 
   // Initialization of the constants used for compensation of the Lagrange
@@ -703,7 +703,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   // Initialization of the local contribution to the pressure
   // average.
   double         local_average_pressure = 0.0;
-  vector<double> local_pressure_coefficient(n_local_dofs);
+  std::vector<double> local_pressure_coefficient(n_local_dofs);
 
 
   // ------------------------------------------------------------
@@ -734,13 +734,13 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
 
       // Values of the partial derivative of the velocity relative to time
       // at the quadrature points on the current fluid cell.  Strictly
-      // speaking, this vector also includes values of the partial
+      // speaking, this std::vector also includes values of the partial
       // derivative of the pressure with respect to time.
       fe_f_v.get_function_values(xit.block(0), local_upt);
 
 
       // Values of the velocity at the quadrature points on the current
-      // fluid cell. Strictly speaking, this vector also includes values of
+      // fluid cell. Strictly speaking, this std::vector also includes values of
       // pressure.
       fe_f_v.get_function_values(xi.block(0), local_up);
 
@@ -914,7 +914,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   if (par.only_NS)
     {
       return;
-      cout << " We have returned right?" << endl;
+      std::cout << " We have returned right?" << std::endl;
     }
   // -----------------------------------------
   // OPERATORS DEFINED OVER ENTIRE DOMAIN: END
@@ -951,12 +951,12 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
 
 
   // Containers to store the information on the interaction of the
-  // current solid cell with the corresponding set of fluid cells that
+  // current solid cell with the corresponding std::set of fluid cells that
   // happen to contain the quadrature points of the solid cell in
   // question.
-  vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
-  vector<vector<Point<dim>>>                             fluid_qpoints;
-  vector<vector<unsigned int>>                           fluid_maps;
+  std::vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+  std::vector<std::vector<Point<dim>>>                             fluid_qpoints;
+  std::vector<std::vector<unsigned int>>                           fluid_maps;
 
 
   // Local storage of the
@@ -973,18 +973,18 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   //  <li> Frechet derivative of $P_{s}^{e} F^{T}$ with respect to degrees of
   //    freedom in a solid cell: <code>DPeFT_dxi</code>.
   // </ul>
-  vector<Vector<double>>         local_Wt(nqps, Vector<double>(dim));
-  vector<Vector<double>>         local_W(nqps, Vector<double>(dim));
-  vector<Tensor<2, dim, double>> Pe(nqps, Tensor<2, dim, double>());
-  vector<Tensor<2, dim, double>> F(nqps, Tensor<2, dim, double>());
-  vector<double>                 local_J(nqps);
-  vector<Tensor<2, dim, double>> local_invFT(nqps, Tensor<2, dim, double>());
+  std::vector<Vector<double>>         local_Wt(nqps, Vector<double>(dim));
+  std::vector<Vector<double>>         local_W(nqps, Vector<double>(dim));
+  std::vector<Tensor<2, dim, double>> Pe(nqps, Tensor<2, dim, double>());
+  std::vector<Tensor<2, dim, double>> F(nqps, Tensor<2, dim, double>());
+  std::vector<double>                 local_J(nqps);
+  std::vector<Tensor<2, dim, double>> local_invFT(nqps, Tensor<2, dim, double>());
   Tensor<2, dim, double>         PeFT;
-  vector<vector<Tensor<2, dim, double>>> DPeFT_dxi;
+  std::vector<std::vector<Tensor<2, dim, double>>> DPeFT_dxi;
   if (update_jacobian)
     {
       DPeFT_dxi.resize(nqps,
-                       vector<Tensor<2, dim, double>>(
+                       std::vector<Tensor<2, dim, double>>(
                          fe_s.dofs_per_cell, Tensor<2, dim, double>()));
     }
 
@@ -993,7 +993,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   // <li> divergence of the velocity
   // <li> the mean elastic stress in the solis
   // </ul>
-  vector<double> local_div_u;
+  std::vector<double> local_div_u;
 
 
   // Initialization of the elastic operator of the immersed
@@ -1117,20 +1117,20 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
           // solid cell of the gradient of velocity of the fluid.
           set_to_zero(local_grad_up);
           local_grad_up.resize(local_quad.size(),
-                               vector<Tensor<1, dim>>(dim + 1));
+                               std::vector<Tensor<1, dim>>(dim + 1));
           local_fe_f_v.get_function_gradients(xi.block(0), local_grad_up);
 
           if (!par.semi_implicit)
             {
               set_to_zero(local_grad_upt);
               local_grad_upt.resize(local_quad.size(),
-                                    vector<Tensor<1, dim>>(dim + 1));
+                                    std::vector<Tensor<1, dim>>(dim + 1));
               local_fe_f_v.get_function_gradients(xit.block(0), local_grad_upt);
 
 
               set_to_zero(local_hessian_up);
               local_hessian_up.resize(local_quad.size(),
-                                      vector<Tensor<2, dim>>(dim + 1));
+                                      std::vector<Tensor<2, dim>>(dim + 1));
               local_fe_f_v.get_function_hessians(xi.block(0), local_hessian_up);
             }
 
@@ -1852,7 +1852,7 @@ IFEM<dim>::run()
 
   const double TOLF = (par.fsi_bm ? 1e-8 : 1e-10);
 
-  // The variable <code>update_Jacobian</code> is set to true so to have a
+  // The variable <code>update_Jacobian</code> is std::set to true so to have a
   // meaningful first update of the solution.
   bool update_Jacobian = true;
 
@@ -1860,7 +1860,7 @@ IFEM<dim>::run()
   for (double t = current_time + par.dt; (t - par.T) <= 1e-8; t += par.dt)
     {
       //------------------TEST----------------------
-      // string ftest_name;
+      // std::string ftest_name;
       //     if (abs(t-0.5)<1e-8)
       //     {
       //        if (par.this_is_a_restart)
@@ -1868,7 +1868,7 @@ IFEM<dim>::run()
       //        else
       //           ftest_name = ".txt";
       //
-      //        ofstream fstream (("test_xi"+ftest_name).c_str());
+      //        std::ofstream fstream (("test_xi"+ftest_name).c_str());
       //        current_xi.print(fstream);
       //        fstream.close();
       //     }
@@ -1892,7 +1892,7 @@ IFEM<dim>::run()
           //
           // $f(\xi', \xi, t) = 0, \quad \xi(0) = \xi_{0}$.
           //
-          // Denoting the current time step by $n$, the vector $\xi'(t_{n})$ is
+          // Denoting the current time step by $n$, the std::vector $\xi'(t_{n})$ is
           // assumed to be a linear combination of $\xi(t_{i})$, with $i = n - m
           // \ldots n$, with $m \le n$. For simplicity, here we implement an
           // implicit Euler method, according to which $\xi'(t_{n}) =
@@ -1931,7 +1931,7 @@ IFEM<dim>::run()
 
           if (par.only_NS)
             res_norm = current_res.block(0)
-                         .l2_norm(); //: Norm of block(0) of the residual vector
+                         .l2_norm(); //: Norm of block(0) of the residual std::vector
           else
             res_norm = current_res.l2_norm(); // Norm of the residual.
 
@@ -1951,7 +1951,7 @@ IFEM<dim>::run()
             {
               // If the norm of the residual is not sufficiently small, make a
               // note of it and compute an update.
-              cout << nonlin_iter << ": " << res_norm << endl;
+              std::cout << nonlin_iter << ": " << res_norm << std::endl;
 
 
               // To compute the update to the current $\xi$, we first change the
@@ -2004,7 +2004,7 @@ IFEM<dim>::run()
           // We are here because the solution needed an update. So, start
           // counting how many iterations are needed to converge.  If
           // convergence is not achieved in 15 iterations update the Jacobian
-          // and try again.  The maximum number of 15-iteration cycles is set
+          // and try again.  The maximum number of 15-iteration cycles is std::set
           // (arbitrarily) to three. The counter for the cycle is
           // <code>outer_nonlin_iter</code>.
           ++nonlin_iter;
@@ -2060,7 +2060,7 @@ IFEM<dim>::output_step(const double               t,
                        const double               h,
                        const bool                 _output)
 {
-  cout << "Time " << t << ", Step " << step << ", dt = " << h << endl;
+  std::cout << "Time " << t << ", Step " << step << ", dt = " << h << std::endl;
 
   global_info_file << t << " ";
   {
@@ -2078,11 +2078,11 @@ IFEM<dim>::output_step(const double               t,
   if ((step % par.output_interval == 0) || (_output))
     {
       {
-        vector<string> joint_solution_names(dim, "v");
+        std::vector<std::string> joint_solution_names(dim, "v");
         joint_solution_names.push_back("p");
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dh_f);
-        vector<DataComponentInterpretation::DataComponentInterpretation>
+        std::vector<DataComponentInterpretation::DataComponentInterpretation>
           component_interpretation(
             dim + 1, DataComponentInterpretation::component_is_part_of_vector);
         component_interpretation[dim] =
@@ -2094,17 +2094,17 @@ IFEM<dim>::output_step(const double               t,
                                  component_interpretation);
 
         data_out.build_patches(par.degree);
-        ofstream output((par.output_name + "-fluid-" +
+        std::ofstream output((par.output_name + "-fluid-" +
                          Utilities::int_to_string(step, 5) + ".vtu")
                           .c_str());
 
         data_out.write_vtu(output);
       }
       {
-        vector<string> joint_solution_names(dim, "W");
+        std::vector<std::string> joint_solution_names(dim, "W");
         DataOut<dim>   data_out;
         data_out.attach_dof_handler(dh_s);
-        vector<DataComponentInterpretation::DataComponentInterpretation>
+        std::vector<DataComponentInterpretation::DataComponentInterpretation>
           component_interpretation(
             dim, DataComponentInterpretation::component_is_part_of_vector);
 
@@ -2115,7 +2115,7 @@ IFEM<dim>::output_step(const double               t,
 
 
         data_out.build_patches(*mapping);
-        ofstream output((par.output_name + "-solid-" +
+        std::ofstream output((par.output_name + "-solid-" +
                          Utilities::int_to_string(step, 5) + ".vtu")
                           .c_str());
         data_out.write_vtu(output);
@@ -2132,7 +2132,7 @@ IFEM<dim>::output_step(const double               t,
                                 update_values | update_JxW_values |
                                   update_normal_vectors);
 
-    vector<Vector<double>> local_vp(face_quad.size(), Vector<double>(dim + 1));
+    std::vector<Vector<double>> local_vp(face_quad.size(), Vector<double>(dim + 1));
 
     double flux = 0;
     for (; cell != endc; ++cell)
@@ -2141,7 +2141,7 @@ IFEM<dim>::output_step(const double               t,
           {
             fe_v.reinit(cell, f);
             fe_v.get_function_values(solution.block(0), local_vp);
-            const vector<Tensor<1, dim>> &normals = fe_v.get_normal_vectors();
+            const std::vector<Tensor<1, dim>> &normals = fe_v.get_normal_vectors();
             for (unsigned int q = 0; q < face_quad.size(); ++q)
               {
                 Point<dim> vq;
@@ -2162,13 +2162,13 @@ IFEM<dim>::output_step(const double               t,
                             quad_s,
                             update_JxW_values | update_quadrature_points);
 
-    vector<Vector<double>> local_X(quad_s.size(), Vector<double>(dim + 1));
+    std::vector<Vector<double>> local_X(quad_s.size(), Vector<double>(dim + 1));
     double                 area = 0;
     Point<dim>             center;
     for (; cell != endc; ++cell)
       {
         fe_v.reinit(cell);
-        const vector<Point<dim>> &qpoints = fe_v.get_quadrature_points();
+        const std::vector<Point<dim>> &qpoints = fe_v.get_quadrature_points();
         for (unsigned int q = 0; q < quad_s.size(); ++q)
           {
             area += fe_v.JxW(q);
@@ -2177,17 +2177,17 @@ IFEM<dim>::output_step(const double               t,
       }
     center /= area;
     global_info_file << area << " ";
-    global_info_file << center << endl;
+    global_info_file << center << std::endl;
   }
 }
 
-// Determination of a vector of local dofs representing
+// Determination of a std::vector of local dofs representing
 //    the field <code>A_gamma</code>.
 
 template <int dim>
 void
 IFEM<dim>::get_Agamma_values(const FEValues<dim, dim>   &fe_v_s,
-                             const vector<unsigned int> &dofs,
+                             const std::vector<unsigned int> &dofs,
                              const Vector<double>       &xi,
                              Vector<double>             &local_A_gamma)
 {
@@ -2195,12 +2195,12 @@ IFEM<dim>::get_Agamma_values(const FEValues<dim, dim>   &fe_v_s,
 
   unsigned int qsize = fe_v_s.get_quadrature().size();
 
-  vector<vector<Tensor<1, dim>>> H(qsize, vector<Tensor<1, dim>>(dim));
+  std::vector<std::vector<Tensor<1, dim>>> H(qsize, std::vector<Tensor<1, dim>>(dim));
   fe_v_s.get_function_gradients(xi, H);
 
-  vector<Tensor<2, dim, double>>         P(qsize, Tensor<2, dim, double>());
-  vector<Tensor<2, dim, double>>         tmp1;
-  vector<vector<Tensor<2, dim, double>>> tmp2;
+  std::vector<Tensor<2, dim, double>>         P(qsize, Tensor<2, dim, double>());
+  std::vector<Tensor<2, dim, double>>         tmp1;
+  std::vector<std::vector<Tensor<2, dim, double>>> tmp2;
 
   get_Pe_F_and_DPeFT_dxi_values(fe_v_s, dofs, xi, false, P, tmp1, tmp2);
 
@@ -2227,14 +2227,14 @@ template <class FEVal>
 void
 IFEM<dim>::get_Pe_F_and_DPeFT_dxi_values(
   const FEVal                            &fe_v_s,
-  const vector<unsigned int>             &,
+  const std::vector<unsigned int>             &,
   const Vector<double>                   &xi,
   const bool                              update_jacobian,
-  vector<Tensor<2, dim, double>>         &Pe,
-  vector<Tensor<2, dim, double>>         &vec_F,
-  vector<vector<Tensor<2, dim, double>>> &DPeFT_dxi)
+  std::vector<Tensor<2, dim, double>>         &Pe,
+  std::vector<Tensor<2, dim, double>>         &vec_F,
+  std::vector<std::vector<Tensor<2, dim, double>>> &DPeFT_dxi)
 {
-  vector<vector<Tensor<1, dim>>> H(Pe.size(), vector<Tensor<1, dim>>(dim));
+  std::vector<std::vector<Tensor<1, dim>>> H(Pe.size(), std::vector<Tensor<1, dim>>(dim));
   fe_v_s.get_function_gradients(xi, H);
 
   Tensor<2, dim, double> F;
@@ -2315,7 +2315,7 @@ IFEM<dim>::get_Pe_F_and_DPeFT_dxi_values(
           case IFEMParameters<dim>::CircumferentialFiberModel:
             p = fe_v_s.quadrature_point(qs) - par.ring_center;
 
-            // Find the unit vector along the tangential direction
+            // Find the unit std::vector along the tangential direction
             etheta[0] = -p[1] / p.norm();
             etheta[1] = p[0] / p.norm();
 
@@ -2481,8 +2481,8 @@ IFEM<dim>::get_Pe_F_and_DPeFT_dxi_values(
 
 template <int dim>
 void
-IFEM<dim>::get_inverse_transpose(const vector<Tensor<2, dim>> &F,
-                                 vector<Tensor<2, dim>>       &local_invFT)
+IFEM<dim>::get_inverse_transpose(const std::vector<Tensor<2, dim>> &F,
+                                 std::vector<Tensor<2, dim>>       &local_invFT)
 {
   for (unsigned int q = 0; q < F.size(); ++q)
     local_invFT[q] = transpose(invert(F[q]));
@@ -2494,8 +2494,8 @@ IFEM<dim>::get_inverse_transpose(const vector<Tensor<2, dim>> &F,
 template <int dim>
 void
 IFEM<dim>::distribute_residual(Vector<double>             &residual,
-                               const vector<double>       &local_res,
-                               const vector<unsigned int> &dofs_1,
+                               const std::vector<double>       &local_res,
+                               const std::vector<unsigned int> &dofs_1,
                                const unsigned int          offset_1)
 {
   for (unsigned int i = 0, wi = offset_1; i < dofs_1.size(); ++i, ++wi)
@@ -2508,8 +2508,8 @@ template <int dim>
 void
 IFEM<dim>::distribute_jacobian(SparseMatrix<double>       &Jacobian,
                                const FullMatrix<double>   &local_Jac,
-                               const vector<unsigned int> &dofs_1,
-                               const vector<unsigned int> &dofs_2,
+                               const std::vector<unsigned int> &dofs_1,
+                               const std::vector<unsigned int> &dofs_2,
                                const unsigned int          offset_1,
                                const unsigned int          offset_2)
 {
@@ -2523,13 +2523,13 @@ IFEM<dim>::distribute_jacobian(SparseMatrix<double>       &Jacobian,
 
 template <int dim>
 void
-IFEM<dim>::apply_constraints(vector<double>             &local_res,
+IFEM<dim>::apply_constraints(std::vector<double>             &local_res,
                              FullMatrix<double>         &local_jacobian,
                              const Vector<double>       &value_of_dofs,
-                             const vector<unsigned int> &dofs,
+                             const std::vector<unsigned int> &dofs,
                              unsigned int                offset)
 {
-  map<types::global_dof_index, double>::iterator it;
+  std::map<types::global_dof_index, double>::iterator it;
 
   if (offset == 0) //: i.e. constraints need to be applied for fluid dofs
     for (unsigned int i = 0; i < dofs.size(); ++i)
@@ -2602,8 +2602,8 @@ template <int dim>
 void
 IFEM<dim>::distribute_constraint_on_pressure(
   SparseMatrix<double>       &jacobian,
-  const vector<double>       &pressure_coefficient,
-  const vector<unsigned int> &dofs,
+  const std::vector<double>       &pressure_coefficient,
+  const std::vector<unsigned int> &dofs,
   const unsigned int          offset)
 {
   for (unsigned int i = 0, wi = offset; i < dofs.size(); ++i, ++wi)
@@ -2619,14 +2619,14 @@ template <int dim>
 void
 IFEM<dim>::localize(Vector<double>             &local_M_gamma3_inv_A_gamma,
                     const Vector<double>       &M_gamma3_inv_A_gamma,
-                    const vector<unsigned int> &dofs)
+                    const std::vector<unsigned int> &dofs)
 {
   for (unsigned int i = 0; i < dofs.size(); ++i)
     local_M_gamma3_inv_A_gamma(i) = M_gamma3_inv_A_gamma(dofs[i]);
 }
 
 
-// Determination of the volume flux vector corresponding to the point source.
+// Determination of the volume flux std::vector corresponding to the point source.
 template <int dim>
 void
 IFEM<dim>::get_volume_flux_vector(const double t)
@@ -2656,7 +2656,7 @@ IFEM<dim>::get_volume_flux_vector(const double t)
     }
   // We need to consider only the contribution of the test functions pertaining
   // to the Lagrange multiplier.
-  fill(volume_flux.begin(), volume_flux.begin() + n_dofs_u, 0.0);
+  std::fill(volume_flux.begin(), volume_flux.begin() + n_dofs_u, 0.0);
 }
 
 
@@ -2670,7 +2670,8 @@ IFEM<dim>::calculate_error() const
   ExactSolutionRingWithFibers<dim> exact_sol(par);
 
   const ComponentSelectFunction<dim> pressure_mask(dim, dim + 1);
-  const ComponentSelectFunction<dim> velocity_mask(make_pair(0, dim), dim + 1);
+  const ComponentSelectFunction<dim> velocity_mask(std::make_pair(0, dim),
+                                                   dim + 1);
 
   const QIterated<dim> qiter_err(QTrapezoid<1>(), par.degree + 1);
 
@@ -2704,9 +2705,9 @@ IFEM<dim>::calculate_error() const
                                     &pressure_mask);
   const double p_l2_norm = difference_per_cell.l2_norm();
 
-  ofstream file_write;
+  std::ofstream file_write;
 
-  string quad_name;
+  std::string quad_name;
   switch (par.quad_s_type)
     {
       case IFEMParameters<dim>::QGauss:
@@ -2721,22 +2722,23 @@ IFEM<dim>::calculate_error() const
       default:
         break;
     }
-  string filename;
+  std::string filename;
   if (dgp_for_p)
     filename = "hello_world_error_norm_pFEDGP_" + quad_name + ".dat";
   else
     filename = "hello_world_error_norm_pFEQ_" + quad_name + ".dat";
 
-  file_write.open(filename.c_str(), ios::out | ios::app);
+  file_write.open(filename.c_str(), std::ios::out | std::ios::app);
   if (file_write.is_open())
     {
-      file_write.unsetf(ios::floatfield);
-      file_write << "- & " << setw(4) << tria_s.n_active_cells() << " & "
-                 << setw(6) << n_dofs_W << " & " << setw(4)
-                 << tria_f.n_active_cells() << " & " << setw(6) << n_dofs_up
-                 << scientific << setprecision(5) << " & " << setw(8)
-                 << v_l2_norm << " &-& " << setw(8) << v_h1_seminorm << " &-& "
-                 << setw(8) << p_l2_norm << " &- \\\\" << endl;
+      file_write.unsetf(std::ios::floatfield);
+      file_write << "- & " << std::setw(4) << tria_s.n_active_cells() << " & "
+                 << std::setw(6) << n_dofs_W << " & " << std::setw(4)
+                 << tria_f.n_active_cells() << " & " << std::setw(6) << n_dofs_up
+                 << std::scientific << std::setprecision(5) << " & "
+                 << std::setw(8) << v_l2_norm << " &-& " << std::setw(8)
+                 << v_h1_seminorm << " &-& " << std::setw(8) << p_l2_norm
+                 << " &- \\\\" << std::endl;
     }
   file_write.close();
 }
@@ -2803,11 +2805,11 @@ IFEM<dim>::fsi_bm_postprocess()
                                   update_quadrature_points | update_JxW_values);
 
   unsigned int         n_dofs = fe_f.dofs_per_cell;
-  vector<unsigned int> dofs_f(n_dofs);
+  std::vector<unsigned int> dofs_f(n_dofs);
 
-  vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
-  vector<vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
-                                            vector<Tensor<1, dim>>(dim + 1));
+  std::vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
+  std::vector<std::vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
+                                            std::vector<Tensor<1, dim>>(dim + 1));
 
   Tensor<1, dim> drag_lift_cyl;
   Tensor<1, dim> drag_lift_flag_f;
@@ -2819,7 +2821,7 @@ IFEM<dim>::fsi_bm_postprocess()
   double         gradn_u_t;
   Tensor<1, dim> normal_vector;
   Tensor<1, dim> tangent_vector;
-  vector<double> drag_lift_turekstyle(dim);
+  std::vector<double> drag_lift_turekstyle(dim);
   double         c_L_turekstyle = 0.;
   double         c_D_turekstyle = 0.;
   //:-----------------------
@@ -2891,7 +2893,7 @@ IFEM<dim>::fsi_bm_postprocess()
       // We find the solid cell in which point A resides and then
       // associate a quadrature point with point A. Note a quadrature point can
       // only lie in a unit cell.
-      const pair<typename DoFHandler<dim, dim>::active_cell_iterator,
+      const std::pair<typename DoFHandler<dim, dim>::active_cell_iterator,
                  Point<dim>>
         cell_and_point = GridTools::find_active_cell_around_point(
           StaticMappingQ1<dim, dim>::mapping, dh_s, point_A);
@@ -2908,9 +2910,9 @@ IFEM<dim>::fsi_bm_postprocess()
 
       QIterated<dim - 1> quad_face_s(QMidpoint<1>(), 5);
 
-      vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
-      vector<vector<Point<dim>>>                             fluid_qpoints;
-      vector<vector<unsigned int>>                           fluid_maps;
+      std::vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+      std::vector<std::vector<Point<dim>>>                             fluid_qpoints;
+      std::vector<std::vector<unsigned int>>                           fluid_maps;
 
       FEFaceValues<dim, dim> fe_s_face_v(fe_s,
                                          quad_face_s,
@@ -2942,27 +2944,27 @@ IFEM<dim>::fsi_bm_postprocess()
       // Calculation of the drag-lift over the flag based on Cauchy stress in
       // fluid...
       unsigned int         n_dofs_s = fe_s.dofs_per_cell;
-      vector<unsigned int> dofs_s(n_dofs_s);
+      std::vector<unsigned int> dofs_s(n_dofs_s);
       unsigned int         n_qps = quad_face_s.size();
 
-      vector<vector<Tensor<1, dim>>> sol_grad_s(n_qps,
-                                                vector<Tensor<1, dim>>(dim));
+      std::vector<std::vector<Tensor<1, dim>>> sol_grad_s(n_qps,
+                                                std::vector<Tensor<1, dim>>(dim));
 
-      vector<Tensor<1, dim>> flag_sum_traction_s_e(n_qps);
-      vector<Tensor<1, dim>> flag_sum_traction_s_inc(n_qps);
+      std::vector<Tensor<1, dim>> flag_sum_traction_s_e(n_qps);
+      std::vector<Tensor<1, dim>> flag_sum_traction_s_inc(n_qps);
       Tensor<1, dim>         flag_sum_traction_s_inc2;
       Tensor<1, dim>         flag_sum_traction_s_v;
       Tensor<1, dim>         flag_sum_traction_f;
       Tensor<1, dim>         flag_sum_traction_s;
 
 
-      vector<Vector<double>> projected_p(n_qps, Vector<double>(dim));
+      std::vector<Vector<double>> projected_p(n_qps, Vector<double>(dim));
 
-      vector<Tensor<2, dim, double>> Pe(n_qps, Tensor<2, dim, double>());
-      vector<vector<Tensor<2, dim, double>>> DPeFT_dxi;
+      std::vector<Tensor<2, dim, double>> Pe(n_qps, Tensor<2, dim, double>());
+      std::vector<std::vector<Tensor<2, dim, double>>> DPeFT_dxi;
 
-      vector<Tensor<2, dim, double>> F(n_qps, Tensor<2, dim, double>());
-      vector<Tensor<2, dim, double>> inv_FT(n_qps, Tensor<2, dim, double>());
+      std::vector<Tensor<2, dim, double>> F(n_qps, Tensor<2, dim, double>());
+      std::vector<Tensor<2, dim, double>> inv_FT(n_qps, Tensor<2, dim, double>());
       Vector<double>                 det_F(n_qps);
 
       set_to_zero(tmp_vec_n_dofs_W);
@@ -3083,7 +3085,7 @@ IFEM<dim>::fsi_bm_postprocess()
 
                       set_to_zero(sol_grad_f);
                       sol_grad_f.resize(local_quad.size(),
-                                        vector<Tensor<1, dim>>(dim + 1));
+                                        std::vector<Tensor<1, dim>>(dim + 1));
                       local_fe_f_v.get_function_gradients(current_xi.block(0),
                                                           sol_grad_f);
 
@@ -3184,9 +3186,9 @@ IFEM<dim>::fsi_bm_postprocess()
         }         // End loop over solid cells
     }             // For FSI test only
 
-  fsi_bm_out_file.unsetf(ios_base::floatfield);
+  fsi_bm_out_file.unsetf(std::ios_base::floatfield);
   fsi_bm_out_file
-    << current_time << "\t" << scientific
+    << current_time << "\t" << std::scientific
     << (par.cfd_test ? c_D_turekstyle : disp_A(0)) << "\t"
     << (par.cfd_test ? c_L_turekstyle : disp_A(1)) << "\t"
     << sol_B(dim)                      //: Pressure at stagnation pt
@@ -3213,7 +3215,7 @@ IFEM<dim>::fsi_bm_postprocess()
     << "\t"
     << drag_lift_cyl[1] + drag_lift_flag_avg[1] //: Lift based on avg. of the
                                                 //: traction at the interface
-    << endl;
+    << std::endl;
 }
 
 
@@ -3260,10 +3262,10 @@ IFEM<dim>::fsi_bm_postprocess()
 //                                  update_JxW_values);
 
 //   unsigned int n_dofs = fe_f.dofs_per_cell;
-//   vector <unsigned int> dofs_f (n_dofs);
+//   std::vector <unsigned int> dofs_f (n_dofs);
 
-//   vector < Vector <double> > sol_f (n_qpf, Vector <double> (dim+1));
-//   vector < vector< Tensor <1, dim> > > sol_grad_f (n_qpf, vector< Tensor
+//   std::vector < Vector <double> > sol_f (n_qpf, Vector <double> (dim+1));
+//   std::vector < std::vector< Tensor <1, dim> > > sol_grad_f (n_qpf, std::vector< Tensor
 //   <1,dim> > (dim+1));
 
 //   Tensor < 1, dim > drag_lift_cyl;
@@ -3276,7 +3278,7 @@ IFEM<dim>::fsi_bm_postprocess()
 //   double gradn_u_t;
 //   Point<dim> normal_vector;
 //   Point<dim> tangent_vector;
-//   vector <double> drag_lift_turekstyle(dim);
+//   std::vector <double> drag_lift_turekstyle(dim);
 //   double c_L_turekstyle = 0.;
 //   double c_D_turekstyle = 0.;
 //   //:-----------------------
@@ -3360,7 +3362,7 @@ IFEM<dim>::fsi_bm_postprocess()
 //       //associate a quadrature point with point A. Note a quadrature point
 //       can only
 //       //lie in a unit cell.
-//       const pair<typename DoFHandler<dim, dim>::active_cell_iterator,
+//       const std::pair<typename DoFHandler<dim, dim>::active_cell_iterator,
 //       Point<dim> > cell_and_point
 //         = GridTools::find_active_cell_around_point (StaticMappingQ1<dim,
 //         dim>::mapping,
@@ -3379,9 +3381,9 @@ IFEM<dim>::fsi_bm_postprocess()
 
 //       QIterated<dim-1> quad_face_s (QMidpoint<1>(), 5);
 
-//       vector <typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
-//       vector <vector<Point<dim> > > fluid_qpoints;
-//       vector< vector<unsigned int > > fluid_maps;
+//       std::vector <typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+//       std::vector <std::vector<Point<dim> > > fluid_qpoints;
+//       std::vector< std::vector<unsigned int > > fluid_maps;
 
 //       FEFaceValues <dim, dim> fe_s_face_v (fe_s,
 //                                            quad_face_s,
@@ -3413,27 +3415,27 @@ IFEM<dim>::fsi_bm_postprocess()
 
 
 //       //Calculation of the drag-lift over the flag based on Cauchy stress in
-//       fluid... unsigned int n_dofs_s = fe_s.dofs_per_cell; vector <unsigned
+//       fluid... unsigned int n_dofs_s = fe_s.dofs_per_cell; std::vector <unsigned
 //       int> dofs_s (n_dofs_s); unsigned int n_qps = quad_face_s.size();
 
-//       vector < vector< Tensor <1, dim> > > sol_grad_s (n_qps, vector< Tensor
+//       std::vector < std::vector< Tensor <1, dim> > > sol_grad_s (n_qps, std::vector< Tensor
 //       <1,dim> > (dim));
 
-//       vector< Tensor <1, dim> > flag_sum_traction_s_e (n_qps);
-//       vector< Tensor <1, dim> > flag_sum_traction_s_inc(n_qps);
+//       std::vector< Tensor <1, dim> > flag_sum_traction_s_e (n_qps);
+//       std::vector< Tensor <1, dim> > flag_sum_traction_s_inc(n_qps);
 //       Tensor <1, dim> flag_sum_traction_s_inc2;
 //       Tensor <1, dim> flag_sum_traction_s_v;
 //       Tensor <1, dim> flag_sum_traction_f;
 //       Tensor <1, dim> flag_sum_traction_s;
 
 
-//       vector < Vector <double> > projected_p (n_qps, Vector <double> (dim));
+//       std::vector < Vector <double> > projected_p (n_qps, Vector <double> (dim));
 
-//       vector<Tensor<2,dim,double> > Pe(n_qps, Tensor<2,dim,double>());
-//       vector< vector<Tensor<2,dim,double> > > DPeFT_dxi;
+//       std::vector<Tensor<2,dim,double> > Pe(n_qps, Tensor<2,dim,double>());
+//       std::vector< std::vector<Tensor<2,dim,double> > > DPeFT_dxi;
 
-//       vector<Tensor<2,dim,double> > F(n_qps, Tensor<2,dim,double>());
-//       vector<Tensor<2,dim,double> > inv_FT(n_qps, Tensor<2,dim,double>());
+//       std::vector<Tensor<2,dim,double> > F(n_qps, Tensor<2,dim,double>());
+//       std::vector<Tensor<2,dim,double> > inv_FT(n_qps, Tensor<2,dim,double>());
 //       Vector<double> det_F(n_qps);
 
 //       set_to_zero(tmp_vec_n_dofs_W);
@@ -3567,7 +3569,7 @@ IFEM<dim>::fsi_bm_postprocess()
 
 //                       set_to_zero(sol_grad_f);
 //                       sol_grad_f.resize (local_quad.size(),
-//                                          vector< Tensor<1,dim> >(dim+1)
+//                                          std::vector< Tensor<1,dim> >(dim+1)
 //                                         );
 //                       local_fe_f_v.get_function_gradients
 //                       (current_xi.block(0),
@@ -3672,11 +3674,11 @@ IFEM<dim>::fsi_bm_postprocess()
 //         }//End loop over solid cells
 //     }//For FSI test only
 
-//   fsi_bm_out_file.unsetf(ios_base::floatfield);
+//   fsi_bm_out_file.unsetf(std::ios_base::floatfield);
 //   fsi_bm_out_file
 //       << current_time
 //       << "\t"
-//       << scientific
+//       << std::scientific
 //       << (par.cfd_test ? c_D_turekstyle : disp_A(0))
 //       << "\t"
 //       << (par.cfd_test ? c_L_turekstyle : disp_A(1))
@@ -3702,7 +3704,7 @@ IFEM<dim>::fsi_bm_postprocess()
 //       << "\t"
 //       << drag_lift_cyl[1] + drag_lift_flag_avg[1] //: Lift based on avg. of
 //       the traction at the interface
-//       <<endl;
+//       <<std::endl;
 // }
 
 
@@ -3774,18 +3776,18 @@ IFEM<dim>::fsi_bm_postprocess2()
                          update_quadrature_points);
 
   unsigned int         n_dofs = fe_f.dofs_per_cell;
-  vector<unsigned int> dofs_f(n_dofs);
+  std::vector<unsigned int> dofs_f(n_dofs);
 
-  vector<Vector<double>> sol_f_face(n_qpf_face, Vector<double>(dim + 1));
-  vector<vector<Tensor<1, dim>>> sol_grad_f_face(n_qpf_face,
-                                                 vector<Tensor<1, dim>>(dim +
+  std::vector<Vector<double>> sol_f_face(n_qpf_face, Vector<double>(dim + 1));
+  std::vector<std::vector<Tensor<1, dim>>> sol_grad_f_face(n_qpf_face,
+                                                 std::vector<Tensor<1, dim>>(dim +
                                                                         1));
 
-  vector<Vector<double>>         sol_t_f(n_qpf, Vector<double>(dim + 1));
-  vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
-  vector<vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
-                                            vector<Tensor<1, dim>>(dim + 1));
-  vector<Vector<double>>         local_force(n_qpf, Vector<double>(dim + 1));
+  std::vector<Vector<double>>         sol_t_f(n_qpf, Vector<double>(dim + 1));
+  std::vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
+  std::vector<std::vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
+                                            std::vector<Tensor<1, dim>>(dim + 1));
+  std::vector<Vector<double>>         local_force(n_qpf, Vector<double>(dim + 1));
 
 
   unsigned int c_no = 0;
@@ -3858,7 +3860,7 @@ IFEM<dim>::fsi_bm_postprocess2()
       // We find the solid cell in which point A resides and then
       // associate a quadrature point with point A. Note a quadrature point can
       // only lie in a unit cell.
-      const pair<typename DoFHandler<dim, dim>::active_cell_iterator,
+      const std::pair<typename DoFHandler<dim, dim>::active_cell_iterator,
                  Point<dim>>
         cell_and_point = GridTools::find_active_cell_around_point(
           StaticMappingQ1<dim, dim>::mapping, dh_s, point_A);
@@ -3876,9 +3878,9 @@ IFEM<dim>::fsi_bm_postprocess2()
       FEFieldFunction<dim, Vector<double>> up_field(dh_f, current_xi.block(0));
 
 
-      vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
-      vector<vector<Point<dim>>>                             fluid_qpoints;
-      vector<vector<unsigned int>>                           fluid_maps;
+      std::vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+      std::vector<std::vector<Point<dim>>>                             fluid_qpoints;
+      std::vector<std::vector<unsigned int>>                           fluid_maps;
 
       FEValues<dim, dim> fe_s_v_mapped_point_A(*mapping,
                                                fe_s,
@@ -3893,15 +3895,15 @@ IFEM<dim>::fsi_bm_postprocess2()
                                        quad_s,
                                        update_quadrature_points);
 
-      vector<vector<Tensor<1, dim>>> sol_grad_s(n_qps,
-                                                vector<Tensor<1, dim>>(dim));
+      std::vector<std::vector<Tensor<1, dim>>> sol_grad_s(n_qps,
+                                                std::vector<Tensor<1, dim>>(dim));
       Tensor<2, dim, double>         F;
-      vector<double>                 local_J(n_qps);
+      std::vector<double>                 local_J(n_qps);
 
       local_force.resize(n_qps, Vector<double>(dim + 1));
 
       unsigned int         n_dofs_s = fe_s.dofs_per_cell;
-      vector<unsigned int> dofs_s(n_dofs_s);
+      std::vector<unsigned int> dofs_s(n_dofs_s);
 
       typename DoFHandler<dim, dim>::active_cell_iterator cell_s =
                                                             dh_s.begin_active(),
@@ -3955,7 +3957,7 @@ IFEM<dim>::fsi_bm_postprocess2()
 
               set_to_zero(sol_grad_f);
               sol_grad_f.resize(local_quad.size(),
-                                vector<Tensor<1, dim>>(dim + 1));
+                                std::vector<Tensor<1, dim>>(dim + 1));
               local_fe_f_v.get_function_gradients(current_xi.block(0),
                                                   sol_grad_f);
 
@@ -4013,9 +4015,9 @@ IFEM<dim>::fsi_bm_postprocess2()
         } // End loop over solid cells
 
     } // For FSI test only
-  fsi_bm_out_file.unsetf(ios_base::floatfield);
+  fsi_bm_out_file.unsetf(std::ios_base::floatfield);
   fsi_bm_out_file
-    << current_time << "\t" << scientific << (par.cfd_test ? 0.0 : disp_A(0))
+    << current_time << "\t" << std::scientific << (par.cfd_test ? 0.0 : disp_A(0))
     << "\t" << (par.cfd_test ? 0.0 : disp_A(1)) << "\t"
     << sol_B(dim)                      //: Pressure at stagnation pt
     << "\t" << sol_B(dim) - pressure_A //: Pressure drop
@@ -4027,7 +4029,7 @@ IFEM<dim>::fsi_bm_postprocess2()
     << (par.cfd_test ?
           c_L :
           drag_lift[1]) //: Lift coefficient/Total lift based on fluid stress
-    << endl;
+    << std::endl;
 }
 
 template <int dim>
@@ -4047,7 +4049,7 @@ IFEM<dim>::restart_computations()
 {
   // Load the details concerning the temporal integration.
   // Currently we are reading in: current_time, timestep and dt
-  ifstream ifs(
+  std::ifstream ifs(
     (par.output_name + par.file_info_for_restart + "resume.txt").c_str());
   boost::archive::text_iarchive ia_time(ifs);
   ia_time >> (*this);
@@ -4055,14 +4057,14 @@ IFEM<dim>::restart_computations()
 
   previous_time = current_time;
 
-  ifstream fname_xi(
+  std::ifstream fname_xi(
     (par.output_name + par.file_info_for_restart + "xi.bin").c_str());
   tmp_vec_n_total_dofs.block_read(fname_xi);
   previous_xi = tmp_vec_n_total_dofs;
   fname_xi.close();
 
 
-  // ifstream fname_prev_xi((par.output_name
+  // std::ifstream fname_prev_xi((par.output_name
   //                          + par.file_info_for_restart
   //                          + "prev_xi.bin").c_str());
   //    tmp_vec_n_total_dofs.block_read (fname_prev_xi);
@@ -4070,11 +4072,11 @@ IFEM<dim>::restart_computations()
   //    fname_prev_xi.close();
 
 
-  // Load the vector storing the current solution.
+  // Load the std::vector storing the current solution.
   // tmp_vec_n_total_dofs.load((par.file_info_for_restart + "_xi.txt").c_str());
   // current_xi = tmp_vec_n_total_dofs;
 
-  // Load the vector storing the previous solution.
+  // Load the std::vector storing the previous solution.
   // tmp_vec_n_total_dofs.load((par.file_info_for_restart +
   // "_previous_xi.txt").c_str()); previous_xi = tmp_vec_n_total_dofs;
 }
@@ -4108,24 +4110,24 @@ IFEM<dim>::save_for_restart()
   ofs.close();
 
 
-  // Load the vector storing the current solution.
+  // Load the std::vector storing the current solution.
   //  tmp_vec_n_total_dofs = current_xi;
   //  tmp_vec_n_total_dofs.save ((par.file_info_for_restart +
   //  "_xi.txt").c_str());
 
-  // Load the vector storing the previous solution.
+  // Load the std::vector storing the previous solution.
   //  tmp_vec_n_total_dofs = previous_xi;
   //  tmp_vec_n_total_dofs.save ((par.file_info_for_restart +
   //  "_previous_xi.txt").c_str());
 
-  ofstream fname_xi(
+  std::ofstream fname_xi(
     (par.output_name + par.file_info_for_restart + "xi.bin").c_str());
   tmp_vec_n_total_dofs = current_xi;
   tmp_vec_n_total_dofs.block_write(fname_xi);
   fname_xi.close();
 
 
-  //   ofstream fname_prev_xi((par.output_name
+  //   std::ofstream fname_prev_xi((par.output_name
   //                         + par.file_info_for_restart
   //                         + "prev_xi.bin").c_str());
   //
@@ -4133,7 +4135,7 @@ IFEM<dim>::save_for_restart()
   //   tmp_vec_n_total_dofs.block_write(fname_prev_xi);
   //   fname_prev_xi.close();
 
-  // ifstream fname("test_vec_out.bin");
+  // std::ifstream fname("test_vec_out.bin");
   // test_bvec.block_read(fname);
 }
 
@@ -4147,12 +4149,12 @@ IFEM<dim>::set_to_zero(Type &v) const
   v = 0;
 }
 
-// Simple initialization to zero function templated on a vector of
+// Simple initialization to zero function templated on a std::vector of
 // generic type.
 template <int dim>
 template <class Type>
 void
-IFEM<dim>::set_to_zero(vector<Type> &v) const
+IFEM<dim>::set_to_zero(std::vector<Type> &v) const
 {
   for (unsigned int i = 0; i < v.size(); ++i)
     set_to_zero(v[i]);
@@ -4170,10 +4172,10 @@ IFEM<dim>::set_to_zero(Table<2, Type> &v) const
       set_to_zero(v(i, j));
 }
 
-// Determination of the norm of a vector.
+// Determination of the norm of a std::vector.
 template <int dim>
 double
-IFEM<dim>::norm(const vector<double> &v)
+IFEM<dim>::norm(const std::vector<double> &v)
 {
   double norm = 0;
   for (unsigned int i = 0; i < v.size(); ++i)

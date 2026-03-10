@@ -309,21 +309,21 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
     this->get_integer("Interval (of time-steps) between output");
   use_spread = this->get_bool("Use spread operator");
 
-  if (this->get("Solid constitutive model") == string("INH_0"))
+  if (this->get("Solid constitutive model") == std::string("INH_0"))
     material_model = INH_0;
-  else if (this->get("Solid constitutive model") == string("INH_1"))
+  else if (this->get("Solid constitutive model") == std::string("INH_1"))
     material_model = INH_1;
   else if (this->get("Solid constitutive model") ==
-           string("CircumferentialFiberModel"))
+           std::string("CircumferentialFiberModel"))
     material_model = CircumferentialFiberModel;
-  else if (this->get("Solid constitutive model") == string("CNH_W1"))
+  else if (this->get("Solid constitutive model") == std::string("CNH_W1"))
     material_model = CNH_W1;
-  else if (this->get("Solid constitutive model") == string("CNH_W2"))
+  else if (this->get("Solid constitutive model") == std::string("CNH_W2"))
     material_model = CNH_W2;
-  else if (this->get("Solid constitutive model") == string("STVK"))
+  else if (this->get("Solid constitutive model") == std::string("STVK"))
     material_model = STVK;
   else
-    cout << " No matching constitutive model found! Using INH_0." << endl;
+    std::cout << " No matching constitutive model found! Using INH_0." << std::endl;
 
 
   pressure_constant_c1 = this->get_double("Solid pressure constant, c1");
@@ -331,26 +331,26 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
 
   tau = this->get_double("Solid residual pressure");
 
-  if (this->get("Solid quadrature rule") == string("QGauss"))
+  if (this->get("Solid quadrature rule") == std::string("QGauss"))
     {
       quad_s_type = QGauss;
-      cout << "Using QGauss \n";
+      std::cout << "Using QGauss \n";
     }
-  else if (this->get("Solid quadrature rule") == string("QIter+QTrapez"))
+  else if (this->get("Solid quadrature rule") == std::string("QIter+QTrapez"))
     {
       quad_s_type = Qiter_Qtrapez;
-      cout << "Using QI+QT \n";
+      std::cout << "Using QI+QT \n";
     }
-  else if (this->get("Solid quadrature rule") == string("QIter+QMidpoint"))
+  else if (this->get("Solid quadrature rule") == std::string("QIter+QMidpoint"))
     {
       quad_s_type = Qiter_Qmidpoint;
-      cout << "Using QI+QMid \n";
+      std::cout << "Using QI+QMid \n";
     }
   else
-    cout << " No matching pattern found! Using QGauss." << endl;
+    std::cout << " No matching pattern found! Using QGauss." << std::endl;
 
   quad_s_degree = this->get_integer("Solid quadrature rule degree/copies");
-  cout << " deg/copy=" << quad_s_degree << endl;
+  std::cout << " deg/copy=" << quad_s_degree << std::endl;
   component_mask.set(dim, false);
   static Functions::ZeroFunction<dim> zero(dim + 1);
   zero_boundary_map[id] = &zero;
@@ -371,13 +371,13 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
   this->enter_subsection("Point source");
   //:
   n_pt_source = this->get_integer("Number of point sources present");
-  cout << "No. of pts =" << n_pt_source << endl;
+  std::cout << "No. of pts =" << n_pt_source << std::endl;
 
   if (n_pt_source)
     {
-      string str_loc_all = this->get("List of location(s) of point source(s):");
-      vector<string> vec_loc = Utilities::split_string_list(str_loc_all, ';');
-      vector<string> vec_loc_coord;
+      std::string str_loc_all = this->get("List of location(s) of point source(s):");
+      std::vector<std::string> vec_loc = Utilities::split_string_list(str_loc_all, ';');
+      std::vector<std::string> vec_loc_coord;
 
       Assert(n_pt_source == vec_loc.size(),
              ExcDimensionMismatch(n_pt_source, vec_loc.size()));
@@ -404,10 +404,10 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
 
 
           pt_source_strength.push_back(new ParsedFunction<dim>(1));
-          cout << "Parsing source fn ...."
+          std::cout << "Parsing source fn ...."
                << "Strength of point source no." +
                     Utilities::int_to_string(i + 1)
-               << endl;
+               << std::endl;
           this->enter_subsection("Strength of point source no." +
                                  Utilities::int_to_string(i + 1));
           pt_source_strength[i]->parse_parameters(*this);
@@ -468,7 +468,7 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
 
   if (only_NS)
     {
-      cout << " NOTE: Only solving for NS component of the problem!" << endl;
+      std::cout << " NOTE: Only solving for NS component of the problem!" << std::endl;
       same_density   = true;
       rho_s          = rho_f;
       same_viscosity = true;
@@ -491,11 +491,11 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
 
   // convenience and not for any specific computational need.
   {
-    ofstream paramfile((output_name + "_param.prm").c_str());
+    std::ofstream paramfile((output_name + "_param.prm").c_str());
     this->print_parameters(paramfile, ParameterHandler::PRM);
   }
   {
-    ofstream paramfile((output_name + "_param_short.prm").c_str());
+    std::ofstream paramfile((output_name + "_param_short.prm").c_str());
     this->print_parameters(paramfile, ParameterHandler::ShortPRM);
   }
 
@@ -523,10 +523,10 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
             << "Output files name:\t\t" << output_name << "\n";
 
   if (solid_is_compressible)
-    cout << "Constant c1:\t\t\t " << pressure_constant_c1 << "\n"
+    std::cout << "Constant c1:\t\t\t " << pressure_constant_c1 << "\n"
          << "Constant c2:\t\t\t " << pressure_constant_c2 << "\n";
 
-  cout << std::endl;
+  std::cout << std::endl;
 }
 
 

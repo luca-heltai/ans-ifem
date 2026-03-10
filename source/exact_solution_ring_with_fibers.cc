@@ -59,8 +59,8 @@ ExactSolutionRingWithFibers<dim>::vector_value(const Point<dim> &p,
 template <int dim>
 void
 ExactSolutionRingWithFibers<dim>::vector_value_list(
-  const vector<Point<dim>> &points,
-  vector<Vector<double>>   &values) const
+  const std::vector<Point<dim>> &points,
+  std::vector<Vector<double>>   &values) const
 {
   Assert(points.size() == values.size(),
          ExcDimensionMismatch(points.size(), values.size()));

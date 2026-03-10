@@ -22,7 +22,6 @@
 
 using namespace dealii;
 using namespace dealii::Functions;
-using namespace std;
 
 //! This class collects all of the user-specified parameters, both
 //! pertaining to physics of the problem (e.g., shear modulus, dynamic
@@ -128,14 +127,14 @@ public:
   // Maps of boundary value functions: 1st: a boundary indicator;
   // 2nd: a boundary value function.
 
-  map<types::boundary_id, const Function<dim> *> boundary_map;
+  std::map<types::boundary_id, const Function<dim> *> boundary_map;
 
 
   // Maps of boundary value functions for homogeneous Dirichlet boundary
   // values: 1st: a boundary indicator; 2nd: a zero boundary value
   // function.
 
-  map<types::boundary_id, const Function<dim> *> zero_boundary_map;
+  std::map<types::boundary_id, const Function<dim> *> zero_boundary_map;
 
   //:
 
@@ -154,7 +153,7 @@ public:
   // Map storing the boundary conditions: 1st: a boundary degree of freedom;
   // 2nd: the value of field corresponding to the given degree of freedom.
 
-  map<types::global_dof_index, double> boundary_values;
+  std::map<types::global_dof_index, double> boundary_values;
 
 
   // Flag to indicate whether or not the Newton iteration scheme must
@@ -189,17 +188,17 @@ public:
 
   // Name of the mesh file for the solid domain.
 
-  string solid_mesh;
+  std::string solid_mesh;
 
 
   // Name of the mesh file for the fluid domain.
 
-  string fluid_mesh;
+  std::string fluid_mesh;
 
 
   // Name of the output file.
 
-  string output_name;
+  std::string output_name;
 
 
   // The interval of timesteps between storage of output.
@@ -266,7 +265,7 @@ public:
   // String to store the name of the finite element that will be used
   // for the pressure field.
 
-  string fe_p_name;
+  std::string fe_p_name;
 
   // Variable to store the center of the ring with circumferential fibers
 
@@ -274,8 +273,8 @@ public:
 
   // Variables to store the strength(s) and location(s) of point source(s)
   unsigned int                  n_pt_source;
-  vector<ParsedFunction<dim> *> pt_source_strength;
-  vector<Point<dim>>            pt_source_location;
+  std::vector<ParsedFunction<dim> *> pt_source_strength;
+  std::vector<Point<dim>>            pt_source_location;
 
   // Variable to store the constants necessary to impose the penalty due to
   // the compressibility of the solid
@@ -340,7 +339,7 @@ public:
 
 
   // Prefix of files required for restart.
-  string file_info_for_restart;
+  std::string file_info_for_restart;
 };
 
 #endif

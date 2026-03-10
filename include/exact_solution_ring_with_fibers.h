@@ -51,8 +51,8 @@ public:
   vector_value(const Point<dim> &p, Vector<double> &values) const override;
 
   void
-  vector_value_list(const vector<Point<dim>> &points,
-                    vector<Vector<double>>   &values) const override;
+  vector_value_list(const std::vector<Point<dim>> &points,
+                    std::vector<Vector<double>>   &values) const override;
 
   //! Inner radius of the ring.
 

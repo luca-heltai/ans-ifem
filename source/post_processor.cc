@@ -21,11 +21,11 @@ PostProcessor<dim>::PostProcessor(IFEMParameters<dim> &par)
   , quad_f(par.degree + 2)
 {
   if (par.degree <= 1)
-    cout << " WARNING: The chosen pair of finite element spaces is not  stable."
-         << endl
-         << " The obtained results will be nonsense." << endl;
+    std::cout << " WARNING: The chosen pair of finite element spaces is not  stable."
+         << std::endl
+         << " The obtained results will be nonsense." << std::endl;
 
-  if (Utilities::match_at_string_start(par.fe_p_name, string("FE_DGP")))
+  if (Utilities::match_at_string_start(par.fe_p_name, std::string("FE_DGP")))
     dgp_for_p = true;
   else
     dgp_for_p = false;
@@ -51,10 +51,10 @@ PostProcessor<dim>::PostProcessor(IFEMParameters<dim> &par)
     }
 
   std::ifstream in_test((par.output_name + "_post_global.gpl").c_str());
-  ios::openmode mode;
+  std::ios::openmode mode;
   if (in_test)
     {
-      mode = ios::app;
+      mode = std::ios::app;
       std::string line;
       while (in_test >> std::ws && std::getline(in_test, line))
         ;
@@ -67,7 +67,7 @@ PostProcessor<dim>::PostProcessor(IFEMParameters<dim> &par)
     }
   else
     {
-      mode          = ios::out;
+      mode          = std::ios::out;
       previous_time = 0.0;
       current_time  = 0.0;
       time_step     = 0;
@@ -116,7 +116,7 @@ PostProcessor<dim>::create_triangulation_and_dofs()
   grid_in_f.attach_triangulation(tria_f);
 
   {
-    ifstream file(par.fluid_mesh.c_str());
+    std::ifstream file(par.fluid_mesh.c_str());
     Assert(file, ExcFileNotOpen(par.fluid_mesh.c_str()));
 
 
@@ -128,7 +128,7 @@ PostProcessor<dim>::create_triangulation_and_dofs()
     GridIn<dim, dim> grid_in_s;
     grid_in_s.attach_triangulation(tria_s);
 
-    ifstream file(par.solid_mesh.c_str());
+    std::ifstream file(par.solid_mesh.c_str());
     Assert(file, ExcFileNotOpen(par.solid_mesh.c_str()));
 
     // A grid in ucd format is expected.
@@ -147,22 +147,22 @@ PostProcessor<dim>::create_triangulation_and_dofs()
       //  tria_s.set_boundary(81, boundary_cyl);
     }
 
-  cout << "Number of fluid refines = " << par.ref_f << endl;
+  std::cout << "Number of fluid refines = " << par.ref_f << std::endl;
   tria_f.refine_global(par.ref_f);
-  cout << "Number of active fluid cells: " << tria_f.n_active_cells() << endl;
-  cout << "Minimal fluid cell diam = "
-       << GridTools::minimal_cell_diameter(tria_f) << endl;
-  cout << "Maximal fluid cell diam = "
-       << GridTools::maximal_cell_diameter(tria_f) << endl; // SR
-  cout << "Number of solid refines = " << par.ref_s << endl;
+  std::cout << "Number of active fluid cells: " << tria_f.n_active_cells() << std::endl;
+  std::cout << "Minimal fluid cell diam = "
+       << GridTools::minimal_cell_diameter(tria_f) << std::endl;
+  std::cout << "Maximal fluid cell diam = "
+       << GridTools::maximal_cell_diameter(tria_f) << std::endl; // SR
+  std::cout << "Number of solid refines = " << par.ref_s << std::endl;
   tria_s.refine_global(par.ref_s);
-  cout << "Number of active solid cells: " << tria_s.n_active_cells() << endl;
-  cout << "Minimal solid cell diam = "
-       << GridTools::minimal_cell_diameter(tria_s) << endl;
-  cout << "Maximal solid cell diam = "
-       << GridTools::maximal_cell_diameter(tria_s) << endl;
+  std::cout << "Number of active solid cells: " << tria_s.n_active_cells() << std::endl;
+  std::cout << "Minimal solid cell diam = "
+       << GridTools::minimal_cell_diameter(tria_s) << std::endl;
+  std::cout << "Maximal solid cell diam = "
+       << GridTools::maximal_cell_diameter(tria_s) << std::endl;
 
-  // Initialization of the boundary_indicators vector.
+  // Initialization of the boundary_indicators std::vector.
   boundary_indicators = tria_f.get_boundary_ids();
 
 
@@ -176,11 +176,11 @@ PostProcessor<dim>::create_triangulation_and_dofs()
   // Consistently with the fact that the various components of
   // the system are stored in a block matrix, now renumber
   // velocity and pressure component wise.
-  vector<unsigned int> block_component(dim + 1, 0);
+  std::vector<unsigned int> block_component(dim + 1, 0);
   block_component[dim] = 1;
   DoFRenumbering::component_wise(dh_f, block_component);
 
-  const vector<types::global_dof_index> dofs_per_block =
+  const std::vector<types::global_dof_index> dofs_per_block =
     DoFTools::count_dofs_per_fe_block(dh_f, block_component);
 
 
@@ -200,12 +200,12 @@ PostProcessor<dim>::create_triangulation_and_dofs()
   n_dofs_W     = dh_s.n_dofs();
   n_total_dofs = n_dofs_up + n_dofs_W;
 
-  cout << "dim (V_h) = " << n_dofs_u << endl
-       << "dim (Q_h) = " << n_dofs_p << endl
-       << "dim (Z_h) = " << dh_s.n_dofs() << endl
-       << "Total: " << n_total_dofs << endl;
+  std::cout << "dim (V_h) = " << n_dofs_u << std::endl
+       << "dim (Q_h) = " << n_dofs_p << std::endl
+       << "dim (Z_h) = " << dh_s.n_dofs() << std::endl
+       << "Total: " << n_total_dofs << std::endl;
 
-  vector<unsigned int> all_dofs(2);
+  std::vector<unsigned int> all_dofs(2);
   all_dofs[0] = n_dofs_up;
   all_dofs[1] = n_dofs_W;
 
@@ -320,10 +320,10 @@ get_point_dofs(const DoFHandler<dim, spacedim> &dh,
       dofs.push_back(i);
   if (dofs.size())
     {
-      cout << "Found " << dofs.size() << " point dofs: ";
+      std::cout << "Found " << dofs.size() << " point dofs: ";
       for (unsigned int i = 0; i < dofs.size(); ++i)
-        cout << dofs[i] << ", ";
-      cout << endl;
+        std::cout << dofs[i] << ", ";
+      std::cout << std::endl;
     }
   return dofs;
 }
@@ -346,7 +346,7 @@ PostProcessor<dim>::post_process(const double       t,
                                  const unsigned int step,
                                  const double       dt)
 {
-  cout << "Time " << t << ", Step " << step << ", dt = " << dt << endl;
+  std::cout << "Time " << t << ", Step " << step << ", dt = " << dt << std::endl;
 
   global_info_file << t << " ";
 
@@ -361,7 +361,7 @@ PostProcessor<dim>::post_process(const double       t,
                                 update_values | update_JxW_values |
                                   update_normal_vectors);
 
-    vector<Vector<double>> local_vp(face_quad.size(), Vector<double>(dim + 1));
+    std::vector<Vector<double>> local_vp(face_quad.size(), Vector<double>(dim + 1));
 
     double flux = 0;
     for (; cell != endc; ++cell)
@@ -370,7 +370,7 @@ PostProcessor<dim>::post_process(const double       t,
           {
             fe_v.reinit(cell, f);
             fe_v.get_function_values(current_xi.block(0), local_vp);
-            const vector<Tensor<1, dim>> &normals = fe_v.get_normal_vectors();
+            const std::vector<Tensor<1, dim>> &normals = fe_v.get_normal_vectors();
             for (unsigned int q = 0; q < face_quad.size(); ++q)
               {
                 Point<dim> vq;
@@ -392,13 +392,13 @@ PostProcessor<dim>::post_process(const double       t,
                             quad_s,
                             update_JxW_values | update_quadrature_points);
 
-    vector<Vector<double>> local_X(quad_s.size(), Vector<double>(dim + 1));
+    std::vector<Vector<double>> local_X(quad_s.size(), Vector<double>(dim + 1));
     double                 area = 0;
     Point<dim>             center;
     for (; cell != endc; ++cell)
       {
         fe_v.reinit(cell);
-        const vector<Point<dim>> &qpoints = fe_v.get_quadrature_points();
+        const std::vector<Point<dim>> &qpoints = fe_v.get_quadrature_points();
         for (unsigned int q = 0; q < quad_s.size(); ++q)
           {
             area += fe_v.JxW(q);
@@ -407,7 +407,7 @@ PostProcessor<dim>::post_process(const double       t,
       }
     center /= area;
     global_info_file << area << " ";
-    global_info_file << center << endl;
+    global_info_file << center << std::endl;
   }
   // Compute Drag and lift
   {
@@ -436,7 +436,7 @@ PostProcessor<dim>::post_process(const double       t,
 
     Point<dim> drag_lift;
 
-    static vector<unsigned int> A_dofs = get_point_dofs(dh_s, point_A);
+    static std::vector<unsigned int> A_dofs = get_point_dofs(dh_s, point_A);
     if (A_dofs.size() == 0)
       {
         VectorTools::point_value(dh_s, current_xi.block(1), point_A, disp_A);
@@ -475,18 +475,18 @@ PostProcessor<dim>::post_process(const double       t,
                            update_quadrature_points);
 
     unsigned int         n_dofs = fe_f.dofs_per_cell;
-    vector<unsigned int> dofs_f(n_dofs);
+    std::vector<unsigned int> dofs_f(n_dofs);
 
-    vector<Vector<double>> sol_f_face(n_qpf_face, Vector<double>(dim + 1));
-    vector<vector<Tensor<1, dim>>> sol_grad_f_face(n_qpf_face,
-                                                   vector<Tensor<1, dim>>(dim +
+    std::vector<Vector<double>> sol_f_face(n_qpf_face, Vector<double>(dim + 1));
+    std::vector<std::vector<Tensor<1, dim>>> sol_grad_f_face(n_qpf_face,
+                                                   std::vector<Tensor<1, dim>>(dim +
                                                                           1));
 
-    vector<Vector<double>>         sol_t_f(n_qpf, Vector<double>(dim + 1));
-    vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
-    vector<vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
-                                              vector<Tensor<1, dim>>(dim + 1));
-    vector<Vector<double>>         local_force(n_qpf, Vector<double>(dim + 1));
+    std::vector<Vector<double>>         sol_t_f(n_qpf, Vector<double>(dim + 1));
+    std::vector<Vector<double>>         sol_f(n_qpf, Vector<double>(dim + 1));
+    std::vector<std::vector<Tensor<1, dim>>> sol_grad_f(n_qpf,
+                                              std::vector<Tensor<1, dim>>(dim + 1));
+    std::vector<Vector<double>>         local_force(n_qpf, Vector<double>(dim + 1));
 
 
     unsigned int c_no = 0;
@@ -556,7 +556,7 @@ PostProcessor<dim>::post_process(const double       t,
       // We find the solid cell in which point A resides and then
       // associate a quadrature point with point A. Note a quadrature point can
       // only lie in a unit cell.
-      const pair<typename DoFHandler<dim, dim>::active_cell_iterator,
+      const std::pair<typename DoFHandler<dim, dim>::active_cell_iterator,
                  Point<dim>>
         cell_and_point = GridTools::find_active_cell_around_point(
           StaticMappingQ1<dim, dim>::mapping, dh_s, point_A);
@@ -574,9 +574,9 @@ PostProcessor<dim>::post_process(const double       t,
       FEFieldFunction<dim, Vector<double>> up_field(dh_f, current_xi.block(0));
 
 
-      vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
-      vector<vector<Point<dim>>>                             fluid_qpoints;
-      vector<vector<unsigned int>>                           fluid_maps;
+      std::vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
+      std::vector<std::vector<Point<dim>>>                             fluid_qpoints;
+      std::vector<std::vector<unsigned int>>                           fluid_maps;
 
       FEValues<dim, dim> fe_s_v_mapped_point_A(*mapping,
                                                fe_s,
@@ -591,15 +591,15 @@ PostProcessor<dim>::post_process(const double       t,
                                        quad_s,
                                        update_quadrature_points);
 
-      vector<vector<Tensor<1, dim>>> sol_grad_s(n_qps,
-                                                vector<Tensor<1, dim>>(dim));
+      std::vector<std::vector<Tensor<1, dim>>> sol_grad_s(n_qps,
+                                                std::vector<Tensor<1, dim>>(dim));
       Tensor<2, dim, double>         F;
-      vector<double>                 local_J(n_qps);
+      std::vector<double>                 local_J(n_qps);
 
       local_force.resize(n_qps, Vector<double>(dim + 1));
 
       unsigned int         n_dofs_s = fe_s.dofs_per_cell;
-      vector<unsigned int> dofs_s(n_dofs_s);
+      std::vector<unsigned int> dofs_s(n_dofs_s);
 
       typename DoFHandler<dim, dim>::active_cell_iterator cell_s =
                                                             dh_s.begin_active(),
@@ -653,7 +653,7 @@ PostProcessor<dim>::post_process(const double       t,
 
               set_to_zero(sol_grad_f);
               sol_grad_f.resize(local_quad.size(),
-                                vector<Tensor<1, dim>>(dim + 1));
+                                std::vector<Tensor<1, dim>>(dim + 1));
               local_fe_f_v.get_function_gradients(current_xi.block(0),
                                                   sol_grad_f);
 
@@ -712,9 +712,9 @@ PostProcessor<dim>::post_process(const double       t,
 
     } // For FSI test only
 
-    fsi_bm_out_file.unsetf(ios_base::floatfield);
+    fsi_bm_out_file.unsetf(std::ios_base::floatfield);
     fsi_bm_out_file
-      << current_time << "\t" << scientific << disp_A(0) << "\t" << disp_A(1)
+      << current_time << "\t" << std::scientific << disp_A(0) << "\t" << disp_A(1)
       << "\t" << (dim == 3 ? disp_A(2) : 0) << (dim == 3 ? "\t" : "")
       << sol_B(dim)                      //: Pressure at stagnation pt
       << "\t" << sol_B(dim) - pressure_A //: Pressure drop
@@ -722,7 +722,7 @@ PostProcessor<dim>::post_process(const double       t,
       << drag_lift[0] //: Drag coefficient/Total drag based on fluid stress
       << "\t"
       << drag_lift[1] //: Lift coefficient/Total lift based on fluid stress
-      << endl;
+      << std::endl;
   }
 }
 
@@ -733,8 +733,8 @@ PostProcessor<dim>::post_process(const double       t,
 template <int dim>
 void
 PostProcessor<dim>::get_inverse_transpose(
-  const vector<Tensor<2, dim>> &F,
-  vector<Tensor<2, dim>>       &local_invFT) const
+  const std::vector<Tensor<2, dim>> &F,
+  std::vector<Tensor<2, dim>>       &local_invFT) const
 {
   for (unsigned int q = 0; q < F.size(); ++q)
     local_invFT[q] = transpose(invert(F[q]));
@@ -752,12 +752,12 @@ PostProcessor<dim>::set_to_zero(Type &v) const
   v = 0;
 }
 
-// Simple initialization to zero function templated on a vector of
+// Simple initialization to zero function templated on a std::vector of
 // generic type.
 template <int dim>
 template <class Type>
 void
-PostProcessor<dim>::set_to_zero(vector<Type> &v) const
+PostProcessor<dim>::set_to_zero(std::vector<Type> &v) const
 {
   for (unsigned int i = 0; i < v.size(); ++i)
     set_to_zero(v[i]);
@@ -775,10 +775,10 @@ PostProcessor<dim>::set_to_zero(Table<2, Type> &v) const
       set_to_zero(v(i, j));
 }
 
-// Determination of the norm of a vector.
+// Determination of the norm of a std::vector.
 template <int dim>
 double
-PostProcessor<dim>::norm(const vector<double> &v)
+PostProcessor<dim>::norm(const std::vector<double> &v)
 {
   double norm = 0;
   for (unsigned int i = 0; i < v.size(); ++i)
