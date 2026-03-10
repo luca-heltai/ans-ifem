@@ -38,8 +38,8 @@ PostProcessor<dim>::PostProcessor(IFEMParameters<dim> &par)
         break;
       case IFEMParameters<dim>::Qiter_Qtrapez:
         quad_s.initialize(
-          QIterated<dim>(QTrapez<1>(), par.quad_s_degree).get_points(),
-          QIterated<dim>(QTrapez<1>(), par.quad_s_degree).get_weights());
+          QIterated<dim>(QTrapezoid<1>(), par.quad_s_degree).get_points(),
+          QIterated<dim>(QTrapezoid<1>(), par.quad_s_degree).get_weights());
         break;
       case IFEMParameters<dim>::Qiter_Qmidpoint:
         quad_s.initialize(
@@ -180,8 +180,8 @@ PostProcessor<dim>::create_triangulation_and_dofs()
   block_component[dim] = 1;
   DoFRenumbering::component_wise(dh_f, block_component);
 
-  vector<unsigned int> dofs_per_block(2);
-  DoFTools::count_dofs_per_block(dh_f, dofs_per_block, block_component);
+  const vector<types::global_dof_index> dofs_per_block =
+    DoFTools::count_dofs_per_fe_block(dh_f, block_component);
 
 
   // Accounting of the number of degrees of freedom for the fluid
@@ -571,8 +571,7 @@ PostProcessor<dim>::post_process(const double       t,
 
       const unsigned int n_qps = quad_s.size();
 
-      FEFieldFunction<dim, DoFHandler<dim>, Vector<double>> up_field(
-        dh_f, current_xi.block(0));
+      FEFieldFunction<dim, Vector<double>> up_field(dh_f, current_xi.block(0));
 
 
       vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;

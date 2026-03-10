@@ -18,6 +18,7 @@
 
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/parsed_function.h>
+#include <deal.II/fe/component_mask.h>
 
 using namespace dealii;
 using namespace dealii::Functions;
@@ -142,18 +143,18 @@ public:
 
   std::map<types::boundary_id, const Function<dim> *> boundary_map_solid;
 
-  std::map<unsigned int, double> boundary_values_solid;
+  std::map<types::global_dof_index, double> boundary_values_solid;
   //:
   // Vector of flags for distinguishing between velocity and pressure
   // degrees of freedom.
 
-  vector<bool> component_mask;
+  ComponentMask component_mask;
 
 
   // Map storing the boundary conditions: 1st: a boundary degree of freedom;
   // 2nd: the value of field corresponding to the given degree of freedom.
 
-  map<unsigned int, double> boundary_values;
+  map<types::global_dof_index, double> boundary_values;
 
 
   // Flag to indicate whether or not the Newton iteration scheme must

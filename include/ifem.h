@@ -44,14 +44,13 @@
 #include <deal.II/grid/manifold_lib.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/tria_accessor.h>
-#include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/grid/tria_iterator.h>
 
+#include <deal.II/lac/affine_constraints.h>
 #include <deal.II/lac/precondition.h>
 #include <deal.II/lac/sparse_direct.h>
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/vector.h>
-#include <deal.II/lac/vector_view.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/fe_field_function.h>
@@ -183,12 +182,12 @@ private:
 
   // Constraints matrix for the control volume.
 
-  ConstraintMatrix constraints_f;
+  AffineConstraints<double> constraints_f;
 
 
   // Constraints matrix for the immersed domain.
 
-  ConstraintMatrix constraints_s;
+  AffineConstraints<double> constraints_s;
 
 
   // Sparsity pattern.
@@ -270,11 +269,11 @@ private:
 
 
   // The first dof of the pressure field.
-  unsigned int constraining_dof;
+  types::global_dof_index constraining_dof;
 
 
   // A container to store the dofs corresponding to the pressure field.
-  std::set<unsigned int> pressure_dofs;
+  std::set<types::global_dof_index> pressure_dofs;
 
 
   // Storage for the elasticity operator of the immersed domain.

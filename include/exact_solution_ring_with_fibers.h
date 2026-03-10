@@ -48,11 +48,11 @@ public:
   ExactSolutionRingWithFibers(IFEMParameters<dim> &par);
 
   void
-  vector_value(const Point<dim> &p, Vector<double> &values) const;
+  vector_value(const Point<dim> &p, Vector<double> &values) const override;
 
   void
   vector_value_list(const vector<Point<dim>> &points,
-                    vector<Vector<double>>   &values) const;
+                    vector<Vector<double>>   &values) const override;
 
   //! Inner radius of the ring.
 

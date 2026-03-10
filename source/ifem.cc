@@ -1,6 +1,6 @@
 #include "ifem.h"
 
-#include <deal.II/base/std_cxx14/memory.h>
+#include <memory>
 
 #include "ifem_parameters.h"
 
@@ -64,7 +64,7 @@ IFEM<dim>::IFEM(IFEMParameters<dim> &par)
         quad_s = QGauss<dim>(par.quad_s_degree);
         break;
       case IFEMParameters<dim>::Qiter_Qtrapez:
-        quad_s = QIterated<dim>(QTrapez<1>(), par.quad_s_degree);
+        quad_s = QIterated<dim>(QTrapezoid<1>(), par.quad_s_degree);
         break;
       case IFEMParameters<dim>::Qiter_Qmidpoint:
         quad_s = QIterated<dim>(QMidpoint<1>(), par.quad_s_degree);
@@ -131,8 +131,10 @@ void
 IFEM<dim>::apply_current_bc(BlockVector<double> &vec, const double t)
 {
   compute_current_bc(t);
-  map<unsigned int, double>::iterator it    = par.boundary_values.begin(),
-                                      itend = par.boundary_values.end();
+  map<types::global_dof_index, double>::iterator it =
+                                                    par.boundary_values.begin(),
+                                                 itend =
+                                                   par.boundary_values.end();
   if (vec.size() != 0)
     for (; it != itend; ++it)
       vec.block(0)(it->first) = it->second;
@@ -236,8 +238,8 @@ IFEM<dim>::create_triangulation_and_dofs()
   block_component[dim] = 1;
   DoFRenumbering::component_wise(dh_f, block_component);
 
-  vector<unsigned int> dofs_per_block(2);
-  DoFTools::count_dofs_per_block(dh_f, dofs_per_block, block_component);
+  const vector<types::global_dof_index> dofs_per_block =
+    DoFTools::count_dofs_per_fe_block(dh_f, block_component);
 
 
   // Accounting of the number of degrees of freedom for the fluid
@@ -324,7 +326,7 @@ IFEM<dim>::create_triangulation_and_dofs()
   // The following matrix plays no part in the formulation. It is
   // defined here only to use the VectorTools::project function in
   // initializing the vectors previous_xi.block(0) and unit_pressure.
-  ConstraintMatrix cc;
+  AffineConstraints<double> cc;
   cc.close();
 
 
@@ -366,7 +368,7 @@ IFEM<dim>::create_triangulation_and_dofs()
   // Initialization of the current state of the system.
   current_xi = previous_xi;
 
-  mapping = std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
+  mapping = std::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
     par.degree, dh_s, previous_xi.block(1));
 
   if (!par.this_is_a_restart)
@@ -476,8 +478,7 @@ template <int dim>
 void
 IFEM<dim>::assemble_sparsity(Mapping<dim, dim> &immersed_mapping)
 {
-  FEFieldFunction<dim, DoFHandler<dim>, Vector<double>> up_field(
-    dh_f, tmp_vec_n_dofs_up);
+  FEFieldFunction<dim, Vector<double>> up_field(dh_f, tmp_vec_n_dofs_up);
 
   vector<typename DoFHandler<dim>::active_cell_iterator> cells;
   vector<vector<Point<dim>>>                             qpoints;
@@ -585,11 +586,11 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
   // coincides with the position of the body at the previous time step.
   if (par.semi_implicit == true)
     mapping =
-      std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
+      std::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
         par.degree, dh_s, previous_xi.block(1));
   else
     mapping =
-      std_cxx14::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
+      std::make_unique<MappingQEulerian<dim, Vector<double>, dim>>(
         par.degree, dh_s, xi.block(1));
 
 
@@ -946,8 +947,7 @@ IFEM<dim>::residual_and_or_Jacobian(BlockVector<double>       &residual,
 
   // Representation of the velocity and pressure in the control volume
   // as a field.
-  FEFieldFunction<dim, DoFHandler<dim>, Vector<double>> up_field(dh_f,
-                                                                 xi.block(0));
+  FEFieldFunction<dim, Vector<double>> up_field(dh_f, xi.block(0));
 
 
   // Containers to store the information on the interaction of the
@@ -2227,7 +2227,7 @@ template <class FEVal>
 void
 IFEM<dim>::get_Pe_F_and_DPeFT_dxi_values(
   const FEVal                            &fe_v_s,
-  const vector<unsigned int>             &dofs,
+  const vector<unsigned int>             &,
   const Vector<double>                   &xi,
   const bool                              update_jacobian,
   vector<Tensor<2, dim, double>>         &Pe,
@@ -2529,7 +2529,7 @@ IFEM<dim>::apply_constraints(vector<double>             &local_res,
                              const vector<unsigned int> &dofs,
                              unsigned int                offset)
 {
-  map<unsigned int, double>::iterator it;
+  map<types::global_dof_index, double>::iterator it;
 
   if (offset == 0) //: i.e. constraints need to be applied for fluid dofs
     for (unsigned int i = 0; i < dofs.size(); ++i)
@@ -2672,7 +2672,7 @@ IFEM<dim>::calculate_error() const
   const ComponentSelectFunction<dim> pressure_mask(dim, dim + 1);
   const ComponentSelectFunction<dim> velocity_mask(make_pair(0, dim), dim + 1);
 
-  const QIterated<dim> qiter_err(QTrapez<1>(), par.degree + 1);
+  const QIterated<dim> qiter_err(QTrapezoid<1>(), par.degree + 1);
 
   Vector<float> difference_per_cell(tria_f.n_active_cells());
 
@@ -2904,8 +2904,7 @@ IFEM<dim>::fsi_bm_postprocess()
 
       Quadrature<dim> quad_point_A(unit_cell_point_A);
 
-      FEFieldFunction<dim, DoFHandler<dim>, Vector<double>> up_field(
-        dh_f, current_xi.block(0));
+      FEFieldFunction<dim, Vector<double>> up_field(dh_f, current_xi.block(0));
 
       QIterated<dim - 1> quad_face_s(QMidpoint<1>(), 5);
 
@@ -3874,8 +3873,7 @@ IFEM<dim>::fsi_bm_postprocess2()
 
       const unsigned int n_qps = quad_s.size();
 
-      FEFieldFunction<dim, DoFHandler<dim>, Vector<double>> up_field(
-        dh_f, current_xi.block(0));
+      FEFieldFunction<dim, Vector<double>> up_field(dh_f, current_xi.block(0));
 
 
       vector<typename DoFHandler<dim>::active_cell_iterator> fluid_cells;
@@ -4035,7 +4033,7 @@ IFEM<dim>::fsi_bm_postprocess2()
 template <int dim>
 template <class Archive>
 void
-IFEM<dim>::serialize(Archive &ar, const unsigned int version)
+IFEM<dim>::serialize(Archive &ar, const unsigned int)
 {
   ar &current_time;
   ar &dt;

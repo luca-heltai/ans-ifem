@@ -244,10 +244,10 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
   catch (...)
     {
       std::ofstream ofile("default_" + Utilities::int_to_string(dim) + "d.prm");
-      this->print_parameters(ofile, ParameterHandler::Text);
+      this->print_parameters(ofile, ParameterHandler::PRM);
       ofile.close();
       ofile.open("default_short_" + Utilities::int_to_string(dim) + "d.prm");
-      this->print_parameters(ofile, ParameterHandler::ShortText);
+      this->print_parameters(ofile, ParameterHandler::ShortPRM);
       ofile.close();
       AssertThrow(false,
                   ExcMessage("Created default" + Utilities::int_to_string(dim) +
@@ -303,8 +303,8 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
   fluid_mesh  = this->get("Fluid mesh");
   output_name = this->get("Output base name");
 
-  unsigned char id = this->get_integer("Dirichlet BC indicator");
-  all_DBC          = this->get_bool("All Dirichlet BC");
+  types::boundary_id id = this->get_integer("Dirichlet BC indicator");
+  all_DBC              = this->get_bool("All Dirichlet BC");
   output_interval =
     this->get_integer("Interval (of time-steps) between output");
   use_spread = this->get_bool("Use spread operator");
@@ -351,7 +351,7 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
 
   quad_s_degree = this->get_integer("Solid quadrature rule degree/copies");
   cout << " deg/copy=" << quad_s_degree << endl;
-  component_mask[dim] = false;
+  component_mask.set(dim, false);
   static Functions::ZeroFunction<dim> zero(dim + 1);
   zero_boundary_map[id] = &zero;
   boundary_map[id]      = &u_g;
@@ -492,11 +492,11 @@ IFEMParameters<dim>::IFEMParameters(int argc, char **argv)
   // convenience and not for any specific computational need.
   {
     ofstream paramfile((output_name + "_param.prm").c_str());
-    this->print_parameters(paramfile, this->Text);
+    this->print_parameters(paramfile, ParameterHandler::PRM);
   }
   {
     ofstream paramfile((output_name + "_param_short.prm").c_str());
-    this->print_parameters(paramfile, this->ShortText);
+    this->print_parameters(paramfile, ParameterHandler::ShortPRM);
   }
 
   if (n_pt_source)
